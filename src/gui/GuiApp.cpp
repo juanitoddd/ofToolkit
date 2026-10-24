@@ -38,12 +38,12 @@ void GuiApp::draw() {
 
 	// Debug HUD floating window
 	if (appState->showDebugHud) {
-		if (ImGui::Begin("Debug HUD", &appState->showDebugHud, ImGuiWindowFlags_AlwaysAutoResize)) {
-			ImGui::Text("FPS: %.1f", ofGetFrameRate());
-			ImGui::Text("Window: %dx%d", ofGetWidth(), ofGetHeight());
-			ImGui::Text("State: %s", appState->toString(appState->mode).data());
-			ImGui::End();
-		}
+		ImGui::SetNextWindowSize(ofVec2f(200, 100), ImGuiCond_FirstUseEver);
+		ImGui::Begin("Debug HUD", &appState->showDebugHud);
+		ImGui::Text("FPS: %.1f", ofGetFrameRate());
+		ImGui::Text("Window: %dx%d", ofGetWidth(), ofGetHeight());
+		ImGui::Text("State: %s", appState->toString(appState->mode).data());
+		ImGui::End();
 	}
 
 	gui.end();
