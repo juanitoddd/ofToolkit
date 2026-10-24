@@ -38,6 +38,10 @@ public:
 	std::vector<std::string> fontPaths;
 	int fontIndex = 0;
 
+	// STATE_IMAGE properties
+	std::vector<std::string> imagePaths;
+	int imageIndex = 0;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);

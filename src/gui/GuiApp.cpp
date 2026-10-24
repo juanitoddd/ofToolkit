@@ -80,6 +80,55 @@ void GuiApp::drawTextPanel() {
 	ImGui::End();
 }
 
+void GuiApp::drawImagePanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 400), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Image Viewer");
+
+	if (appState->imagePaths.empty()) {
+		ImGui::TextDisabled("No images found. Drop files into bin/data/images/");
+	} else {
+		// File list
+		ImGui::Text("Files (%lu):", appState->imagePaths.size());
+		if (ImGui::BeginListBox("##images", ImVec2(-1, 120))) {
+			for (int i = 0; i < static_cast<int>(appState->imagePaths.size()); ++i) {
+				bool selected = (appState->imageIndex == i);
+				std::string label = ofFilePath::getFileName(appState->imagePaths[i]);
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					appState->imageIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndListBox();
+		}
+
+		// Reload thumbnail if selection changed
+		if (appState->imageIndex != lastImageIndex_) {
+			lastImageIndex_ = appState->imageIndex;
+			if (appState->imageIndex >= 0 && appState->imageIndex < static_cast<int>(appState->imagePaths.size())) {
+				thumbnailImage_.load(appState->imagePaths[appState->imageIndex]);
+			}
+		}
+
+		// Thumbnail + info
+		if (thumbnailImage_.isAllocated()) {
+			ImGui::Separator();
+			ImGui::Text("Dimensions: %dx%d", thumbnailImage_.getWidth(), thumbnailImage_.getHeight());
+
+			float maxW = 350.0f;
+			float w = thumbnailImage_.getWidth();
+			float h = thumbnailImage_.getHeight();
+			float scale = std::min(maxW / w, 300.0f / h);
+			float drawW = w * scale;
+			float drawH = h * scale;
+			ImGui::Image((ImTextureID)(uintptr_t)thumbnailImage_.getTexture().getTextureData().textureID, ImVec2(drawW, drawH));
+		}
+	}
+
+	ImGui::End();
+}
+
 void GuiApp::draw() {
 	ofSetBackgroundColor(backgroundColor);
 
@@ -117,6 +166,11 @@ void GuiApp::draw() {
 	// STATE_TEXT panel
 	if (appState->mode == State::STATE_TEXT) {
 		drawTextPanel();
+	}
+
+	// STATE_IMAGE panel
+	if (appState->mode == State::STATE_IMAGE) {
+		drawImagePanel();
 	}
 
 	gui.end();

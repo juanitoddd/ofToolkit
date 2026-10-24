@@ -11,6 +11,10 @@ void Engine::setup() {
 	if (appState_->fontPaths.empty()) {
 		ofLogWarning("Engine") << "No fonts found in bin/data/fonts/";
 	}
+	scanImages();
+	if (appState_->imagePaths.empty()) {
+		ofLogWarning("Engine") << "No images found in bin/data/images/";
+	}
 }
 
 void Engine::update() {
@@ -28,6 +32,22 @@ void Engine::scanFonts() {
 	appState_->fontIndex = 0;
 	fonts_.clear();
 	fonts_.resize(appState_->fontPaths.size());
+}
+
+void Engine::scanImages() {
+	ofDirectory dir("images");
+	dir.allowExt("jpg");
+	dir.allowExt("jpeg");
+	dir.allowExt("png");
+	dir.allowExt("gif");
+	dir.allowExt("bmp");
+	dir.allowExt("webp");
+	dir.listDir();
+	appState_->imagePaths.clear();
+	for (int i = 0; i < dir.size(); ++i) {
+		appState_->imagePaths.push_back(dir.getPath(i));
+	}
+	appState_->imageIndex = 0;
 }
 
 void Engine::renderIdle() {
@@ -66,6 +86,41 @@ void Engine::renderText() {
 	ofDrawBitmapString(text, x, y);
 }
 
+void Engine::renderImage() {
+	ofSetBackgroundColor(ofColor(0, 0, 0));
+	ofSetColor(ofColor(255, 255, 255));
+
+	int idx = appState_->imageIndex;
+	if (!appState_->imagePaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->imagePaths.size())) {
+		const std::string& path = appState_->imagePaths[idx];
+		// Lazy load
+		if (!projectorImage_.isAllocated() || lastImagePath_ != path) {
+			projectorImage_.load(path);
+			lastImagePath_ = path;
+		}
+		if (projectorImage_.isAllocated()) {
+			float w = projectorImage_.getWidth();
+			float h = projectorImage_.getHeight();
+			float winW = ofGetWidth();
+			float winH = ofGetHeight();
+			float scale = std::min(winW / w, winH / h);
+			float drawW = w * scale;
+			float drawH = h * scale;
+			float x = (winW - drawW) / 2.0f;
+			float y = (winH - drawH) / 2.0f;
+			projectorImage_.draw(x, y, drawW, drawH);
+			return;
+		}
+	}
+
+	// Empty state
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = "No images found";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
+}
+
 void Engine::renderProjector(State state) {
 	switch (state) {
 	case State::STATE_IDLE:
@@ -73,6 +128,9 @@ void Engine::renderProjector(State state) {
 		break;
 	case State::STATE_TEXT:
 		renderText();
+		break;
+	case State::STATE_IMAGE:
+		renderImage();
 		break;
 	default:
 		ofSetBackgroundColor(ofColor(46, 52, 64));
