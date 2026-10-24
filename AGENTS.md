@@ -1,35 +1,68 @@
-# ProjectionMappingLab — Agent Brief
+# OF Toolkit — Agent Brief
 
-OpenFrameworks app for camera-projector structured-light scanning, 3D reconstruction, and projection mapping onto physical surfaces.
+OpenFrameworks app for showcasing simple use cases with functionality and integrations
 
 ## Architecture
 
-Tha application consists of two apps GuiApp `src/gui/*` and ProjectorApp `src/projector/*` that share state and events through `src/state/AppState.h` and also share a compute engine `src/engine` which takes care of the scanning, calibrations, mesh mapping and rest of tasks.
+Tha application consists of two apps GuiApp `src/gui/*` and ProjectorApp `src/projector/*` that share state and events through `src/state/AppState.h` and also share a compute engine `src/engine` which takes care of additional computation that needs to be shared between the two apps.
 
-### App States
+### UI
 
-from `src/state/AppState.h`, we have following states:
+The GuiApp uses ofImGui to manage the ui, input fields, selects, buttons, sliders, inside windows, top bar menu and rest of interactions.
+
+### App Use Cases
+
+from `src/state/AppState.h`, we have following states that represent use cases:
 
 - STATE_IDLE
-- STATE_CAMERA_CALIB
-- STATE_PROJECTOR_CALIB
-- STATE_SCAN
-- STATE_MESH_VIEW
-- STATE_VERIFY
-- STATE_MAP
-- STATE_PERFORM
+- STATE_TEXT
+- STATE_IMAGE
+- STATE_VIDEO
+- STATE_CAMERA
+- STATE_SOUND
+- STATE_MESH
+
+And may be subject to more use cases.
+
+#### STATE_IDLE
+
+Nothing is depicted, but a floating window with debug information about the app, like fps, size, and more relevant information
+
+#### STATE_TEXT
+
+Input fields, texts, text color picker, font if possible.
+
+#### STATE_IMAGE
+
+Loads a list of image files from `bin/data/images` and using a floating window it displays the image
+
+#### STATE_VIDEO
+
+Loads a list of video files from `bin/data/images` and using a floating window it displays the video with some basic buttons as playback controls.
+
+#### STATE_CAMERA
+
+Using the `ofVideoGrabber` it feed the camera video stream to a floating window. 
+
+#### STATE_SOUND
+
+Loads a list of image files from `bin/data/sounds` and using a floating window to playback the sounds,
+
+#### STATE_MESH
+
+A simple 3D Viewer with orbit controls.
 
 ### Engine
 
-This is where the classes that manage the computer vision, structured-light scanning, 3D reconstruction, and projection mapping are located
-
-This includes, camera-projector calibration, mapping editor, mesh viewer, structured light scanner and rest of additional classes and helpers.
+Inside the The `src/engine` folder is where the classes that manage the computer vision, sound processing, networking, helpers and more are located.
 
 ## Agent skills
 
+Each state mentioned in the use cases should be an issue and therfore a branch to be developed.
+
 ### Issue tracker
 
-Issues live as GitHub issues in `juanitoddd/ProjectionMappingLab`. See `docs/agents/issue-tracker.md`.
+Issues live as GitHub issues in `juanitoddd/ofToolkit`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

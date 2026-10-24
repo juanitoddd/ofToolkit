@@ -1,5 +1,4 @@
 #pragma once
-#include "DataRepository.h"
 #include "../state/AppState.h"
 #include "ofMain.h"
 #include <memory>
@@ -7,36 +6,13 @@
 
 class Engine {
 public:
-    Engine(std::shared_ptr<AppState> state,
-           int cameraDeviceId,
-           int cameraWidth, int cameraHeight,
-           int projectorWidth, int projectorHeight,
-           const std::string& dataRoot = "data/");
+	Engine(std::shared_ptr<AppState> state);
 
-    void setup();
-    void update();
+	void setup();
+	void update();
 
-    bool canEnter(State s) const;
-    std::string getBlockReason() const;
-    void activate(State s);
-
-    const ofPixels& getLatestFrame() const;
-    ofTexture getLatestFrameTexture() const;
-    ofFbo& getProjectorOutput();
-
-    ofEvent<State> onRequestState;
-    DataRepository& getRepository() { return repository_; }
+	ofEvent<State> onRequestState;
 
 private:
-    void ensureDirectories();
-    void tryLoadCameraCalibration();
-
-    std::shared_ptr<AppState> appState_;
-    std::string dataRoot_;
-    mutable std::string blockReason_;
-    ofVideoGrabber grabber_;
-    ofFbo projectorOutput_;
-    DataRepository repository_;
-    int projectorWidth_;
-    int projectorHeight_;
+	std::shared_ptr<AppState> appState_;
 };

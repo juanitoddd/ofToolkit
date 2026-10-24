@@ -1,9 +1,8 @@
 #pragma once
-#include "../state/AppState.h"
 #include "../engine/Engine.h"
+#include "../state/AppState.h"
 #include "ofMain.h"
 #include "ofxImGui.h"
-#include "ui/UiTheme.h"
 
 class GuiApp : public ofBaseApp {
 public:
@@ -28,10 +27,10 @@ public:
 	void dragEvent(ofDragInfo dragInfo) override;
 	void gotMessage(ofMessage msg) override;
 
-	ImVec4 backgroundColor;
 	bool show_test_window;
 	bool show_another_window;
 	float floatValue;
+	ImVec4 backgroundColor = ofColor(236, 239, 244);
 
 private:
 	std::shared_ptr<AppState> appState;
