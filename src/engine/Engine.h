@@ -59,9 +59,8 @@ private:
 	ofSoundPlayer soundPlayer_;
 	std::string lastSoundPath_;
 	std::vector<float> fft_;
-	ofLight light1_;
-	ofLight light2_;
-	ofEasyCam easyCam_;
+	std::unique_ptr<ofLight> light1_;
+	std::unique_ptr<ofLight> light2_;
 	ofMesh loadedMesh_;
 	std::string lastMeshPath_;
 	bool meshLoaded_ = false;

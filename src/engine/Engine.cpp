@@ -28,12 +28,14 @@ void Engine::setup() {
 	fft_.assign(128, 0.0f);
 
 	// 3D lighting setup
-	light1_.setPosition(200, 200, 200);
-	light1_.setDiffuseColor(ofColor(255, 255, 255));
-	light1_.enable();
-	light2_.setPosition(-200, -200, 200);
-	light2_.setDiffuseColor(ofColor(200, 200, 220));
-	light2_.enable();
+	light1_ = std::make_unique<ofLight>();
+	light1_->setPosition(200, 200, 200);
+	light1_->setDiffuseColor(ofColor(255, 255, 255));
+	light1_->enable();
+	light2_ = std::make_unique<ofLight>();
+	light2_->setPosition(-200, -200, 200);
+	light2_->setDiffuseColor(ofColor(200, 200, 220));
+	light2_->enable();
 }
 
 void Engine::update() {
@@ -555,8 +557,8 @@ void Engine::renderMesh() {
 
 	// Lighting
 	ofEnableLighting();
-	light1_.enable();
-	light2_.enable();
+	light1_->enable();
+	light2_->enable();
 
 	int idx = appState_->meshIndex;
 	if (!appState_->meshPaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->meshPaths.size())) {
