@@ -13,14 +13,17 @@ public:
 
 	void renderProjector(State state);
 	void scanFonts();
+	void scanImages();
 
 	ofEvent<State> onRequestState;
 
 private:
 	std::shared_ptr<AppState> appState_;
 	std::vector<ofTrueTypeFont> fonts_;
-	ofFbo textPreviewFbo_;
+	ofImage projectorImage_;
+	std::string lastImagePath_;
 
-	void renderText();
 	void renderIdle();
+	void renderText();
+	void renderImage();
 };

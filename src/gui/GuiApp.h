@@ -27,6 +27,7 @@ public:
 	void dragEvent(ofDragInfo dragInfo) override;
 	void gotMessage(ofMessage msg) override;
 	void drawTextPanel();
+	void drawImagePanel();
 
 	bool show_test_window;
 	bool show_another_window;
@@ -41,4 +42,6 @@ private:
 	ofFbo cameraPreviewFbo_;
 	bool debugDrawCamera_ = false;
 	char textBuffer_[1024] = "Hello, World!";
+	ofImage thumbnailImage_;
+	int lastImageIndex_ = -1;
 };
