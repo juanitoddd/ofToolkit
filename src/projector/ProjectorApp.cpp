@@ -11,5 +11,5 @@ void ProjectorApp::onStateChanged(int & index) {
 }
 
 void ProjectorApp::draw() {
-	ofSetBackgroundColor(backgroundColor);
+	engine_->renderProjector(appState->getState());
 }

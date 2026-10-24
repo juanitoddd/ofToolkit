@@ -29,6 +29,9 @@ public:
 	State mode = State::STATE_IDLE;
 	ofEvent<int> stateChanged;
 
+	// Debug HUD toggle (cross-cutting)
+	bool showDebugHud = true;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);

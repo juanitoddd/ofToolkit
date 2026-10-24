@@ -11,6 +11,8 @@ public:
 	void setup();
 	void update();
 
+	void renderProjector(State state);
+
 	ofEvent<State> onRequestState;
 
 private:

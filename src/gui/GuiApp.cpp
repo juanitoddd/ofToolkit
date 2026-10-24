@@ -9,6 +9,7 @@ void GuiApp::setup() {
 }
 
 void GuiApp::update() {
+	engine_->update();
 }
 
 void GuiApp::draw() {
@@ -28,7 +29,21 @@ void GuiApp::draw() {
 			}
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("Debug")) {
+			ImGui::Checkbox("Show Debug HUD", &appState->showDebugHud);
+			ImGui::EndMenu();
+		}
 		ImGui::EndMainMenuBar();
+	}
+
+	// Debug HUD floating window
+	if (appState->showDebugHud) {
+		if (ImGui::Begin("Debug HUD", &appState->showDebugHud, ImGuiWindowFlags_AlwaysAutoResize)) {
+			ImGui::Text("FPS: %.1f", ofGetFrameRate());
+			ImGui::Text("Window: %dx%d", ofGetWidth(), ofGetHeight());
+			ImGui::Text("State: %s", appState->toString(appState->mode).data());
+			ImGui::End();
+		}
 	}
 
 	gui.end();
