@@ -25,6 +25,7 @@ public:
 	float getVideoPosition() const;
 	float getVideoDuration() const;
 	bool isVideoPlaying() const;
+	GLuint getVideoTextureID() const;
 
 	ofEvent<State> onRequestState;
 

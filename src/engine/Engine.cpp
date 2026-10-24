@@ -140,6 +140,13 @@ bool Engine::isVideoPlaying() const {
 	return videoPlayer_.isLoaded() && !videoPlayer_.isPaused();
 }
 
+GLuint Engine::getVideoTextureID() const {
+	if (videoPlayer_.isLoaded()) {
+		return videoPlayer_.getTexture().getTextureData().textureID;
+	}
+	return 0;
+}
+
 void Engine::loadCurrentVideo() {
 	int idx = appState_->videoIndex;
 	if (appState_->videoPaths.empty() || idx < 0 || idx >= static_cast<int>(appState_->videoPaths.size())) {

@@ -208,6 +208,26 @@ void GuiApp::drawVideoPanel() {
 		int durMins = static_cast<int>(dur) / 60;
 		int durSecs = static_cast<int>(dur) % 60;
 		ImGui::Text("%d:%02d / %d:%02d", posMins, posSecs, durMins, durSecs);
+
+		// Video preview
+		GLuint videoTexID = engine_->getVideoTextureID();
+		if (videoTexID != 0) {
+			ImGui::Separator();
+			ImGui::Text("Preview:");
+			float maxW = 350.0f;
+			float maxH = 250.0f;
+			// Default aspect ratio 16:9
+			float drawW = maxW;
+			float drawH = maxW * 9.0f / 16.0f;
+			if (drawH > maxH) {
+				float scale = maxH / drawH;
+				drawW *= scale;
+				drawH *= scale;
+			}
+			ImTextureID id = (ImTextureID)(intptr_t)videoTexID;
+			ImTextureRef ref(id);
+			ImGui::Image(ref, ImVec2(drawW, drawH));
+		}
 	}
 
 	ImGui::End();
