@@ -46,6 +46,12 @@ public:
 	std::vector<std::string> videoPaths;
 	int videoIndex = 0;
 
+	// STATE_CAMERA properties
+	std::vector<std::string> cameraDeviceNames;
+	std::vector<int> cameraDeviceIDs;
+	int cameraDeviceIndex = 0;
+	int cameraResolutionIndex = 1; // default 640x480
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);

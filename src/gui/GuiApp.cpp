@@ -233,6 +233,78 @@ void GuiApp::drawVideoPanel() {
 	ImGui::End();
 }
 
+void GuiApp::drawCameraPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 400), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Camera Feed");
+
+	if (appState->cameraDeviceNames.empty()) {
+		ImGui::TextDisabled("No camera found.");
+	} else {
+		// Device dropdown
+		ImGui::Text("Device:");
+		std::string devicePreview = appState->cameraDeviceNames[appState->cameraDeviceIndex];
+		if (ImGui::BeginCombo("##device", devicePreview.c_str())) {
+			for (int i = 0; i < static_cast<int>(appState->cameraDeviceNames.size()); ++i) {
+				bool selected = (appState->cameraDeviceIndex == i);
+				if (ImGui::Selectable(appState->cameraDeviceNames[i].c_str(), selected)) {
+					appState->cameraDeviceIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		// Resolution dropdown
+		static const char* resolutionLabels[] = { "320x240", "640x480", "1280x720", "1920x1080" };
+		ImGui::Text("Resolution:");
+		if (ImGui::BeginCombo("##resolution", resolutionLabels[appState->cameraResolutionIndex])) {
+			for (int i = 0; i < 4; ++i) {
+				bool selected = (appState->cameraResolutionIndex == i);
+				if (ImGui::Selectable(resolutionLabels[i], selected)) {
+					appState->cameraResolutionIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		// Re-init camera when device or resolution changes
+		if (appState->cameraDeviceIndex != lastCameraDeviceIndex_ ||
+		    appState->cameraResolutionIndex != lastCameraResolutionIndex_) {
+			lastCameraDeviceIndex_ = appState->cameraDeviceIndex;
+			lastCameraResolutionIndex_ = appState->cameraResolutionIndex;
+			engine_->closeCamera();
+		}
+
+		// Live preview
+		GLuint camTexID = engine_->getCameraTextureID();
+		if (camTexID != 0) {
+			ImGui::Separator();
+			ImGui::Text("Preview:");
+			float maxW = 350.0f;
+			float maxH = 250.0f;
+			float drawW = maxW;
+			float drawH = maxW * 3.0f / 4.0f; // camera typical 4:3
+			if (drawH > maxH) {
+				float scale = maxH / drawH;
+				drawW *= scale;
+				drawH *= scale;
+			}
+			ImTextureID id = (ImTextureID)(intptr_t)camTexID;
+			ImTextureRef ref(id);
+			ImGui::Image(ref, ImVec2(drawW, drawH));
+		} else {
+			ImGui::TextDisabled("Camera initializing...");
+		}
+	}
+
+	ImGui::End();
+}
+
 void GuiApp::draw() {
 	ofSetBackgroundColor(backgroundColor);
 
@@ -280,6 +352,11 @@ void GuiApp::draw() {
 	// STATE_VIDEO panel
 	if (appState->mode == State::STATE_VIDEO) {
 		drawVideoPanel();
+	}
+
+	// STATE_CAMERA panel
+	if (appState->mode == State::STATE_CAMERA) {
+		drawCameraPanel();
 	}
 
 	gui.end();

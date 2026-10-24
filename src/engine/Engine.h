@@ -27,6 +27,12 @@ public:
 	bool isVideoPlaying() const;
 	GLuint getVideoTextureID() const;
 
+	// Camera controls
+	void initCamera();
+	void closeCamera();
+	void scanCameraDevices();
+	GLuint getCameraTextureID() const;
+
 	ofEvent<State> onRequestState;
 
 private:
@@ -37,6 +43,8 @@ private:
 	ofVideoPlayer videoPlayer_;
 	std::string lastVideoPath_;
 	State previousState_ = State::STATE_IDLE;
+	ofVideoGrabber grabber_;
+	bool cameraInitialized_ = false;
 
 	void loadCurrentVideo();
 
@@ -44,4 +52,5 @@ private:
 	void renderText();
 	void renderImage();
 	void renderVideo();
+	void renderCamera();
 };

@@ -19,22 +19,40 @@ void Engine::setup() {
 	if (appState_->videoPaths.empty()) {
 		ofLogWarning("Engine") << "No videos found in bin/data/videos/";
 	}
+	scanCameraDevices();
 }
 
 void Engine::update() {
-	// Pause video when switching away from STATE_VIDEO
 	State current = appState_->getState();
+
+	// Pause video when switching away from STATE_VIDEO
 	if (previousState_ == State::STATE_VIDEO && current != State::STATE_VIDEO) {
 		if (videoPlayer_.isLoaded()) {
 			videoPlayer_.setPaused(true);
 		}
 	}
-	previousState_ = current;
+
+	// Stop camera when switching away from STATE_CAMERA
+	if (previousState_ == State::STATE_CAMERA && current != State::STATE_CAMERA) {
+		closeCamera();
+	}
+
+	// Init/start camera when entering STATE_CAMERA
+	if (current == State::STATE_CAMERA) {
+		if (!cameraInitialized_) {
+			initCamera();
+		}
+		if (cameraInitialized_) {
+			grabber_.update();
+		}
+	}
 
 	// Update video player
 	if (current == State::STATE_VIDEO && videoPlayer_.isLoaded()) {
 		videoPlayer_.update();
 	}
+
+	previousState_ = current;
 }
 
 void Engine::scanFonts() {
@@ -43,7 +61,7 @@ void Engine::scanFonts() {
 	dir.allowExt("otf");
 	dir.listDir();
 	appState_->fontPaths.clear();
-	for (int i = 0; i < dir.size(); ++i) {
+	for (size_t i = 0; i < dir.size(); ++i) {
 		appState_->fontPaths.push_back(dir.getPath(i));
 	}
 	appState_->fontIndex = 0;
@@ -61,7 +79,7 @@ void Engine::scanImages() {
 	dir.allowExt("webp");
 	dir.listDir();
 	appState_->imagePaths.clear();
-	for (int i = 0; i < dir.size(); ++i) {
+	for (size_t i = 0; i < dir.size(); ++i) {
 		appState_->imagePaths.push_back(dir.getPath(i));
 	}
 	appState_->imageIndex = 0;
@@ -81,10 +99,75 @@ void Engine::scanVideos() {
 	dir.allowExt("flv");
 	dir.listDir();
 	appState_->videoPaths.clear();
-	for (int i = 0; i < dir.size(); ++i) {
+	for (size_t i = 0; i < dir.size(); ++i) {
 		appState_->videoPaths.push_back(dir.getPath(i));
 	}
 	appState_->videoIndex = 0;
+}
+
+void Engine::scanCameraDevices() {
+	auto devices = grabber_.listDevices();
+	appState_->cameraDeviceNames.clear();
+	appState_->cameraDeviceIDs.clear();
+	for (const auto& dev : devices) {
+		appState_->cameraDeviceNames.push_back(dev.deviceName);
+		appState_->cameraDeviceIDs.push_back(dev.id);
+	}
+	appState_->cameraDeviceIndex = 0;
+	if (!appState_->cameraDeviceNames.empty()) {
+		ofLogNotice("Engine") << "Found " << appState_->cameraDeviceNames.size() << " camera device(s)";
+	} else {
+		ofLogWarning("Engine") << "No camera devices found";
+	}
+}
+
+// Camera controls
+void Engine::initCamera() {
+	if (appState_->cameraDeviceNames.empty()) {
+		ofLogWarning("Engine") << "Cannot init camera: no devices available";
+		return;
+	}
+	if (cameraInitialized_) {
+		closeCamera();
+	}
+	int idx = appState_->cameraDeviceIndex;
+	if (idx < 0 || idx >= static_cast<int>(appState_->cameraDeviceIDs.size())) {
+		idx = 0;
+		appState_->cameraDeviceIndex = 0;
+	}
+	grabber_.setDeviceID(appState_->cameraDeviceIDs[idx]);
+
+	static const std::pair<int, int> resolutions[] = {
+		{320, 240},
+		{640, 480},
+		{1280, 720},
+		{1920, 1080},
+	};
+	int resIdx = ofClamp(appState_->cameraResolutionIndex, 0, 3);
+	int w = resolutions[resIdx].first;
+	int h = resolutions[resIdx].second;
+
+	grabber_.setup(w, h);
+	cameraInitialized_ = grabber_.isInitialized();
+	if (cameraInitialized_) {
+		ofLogNotice("Engine") << "Camera initialized: " << w << "x" << h;
+	} else {
+		ofLogWarning("Engine") << "Failed to initialize camera";
+	}
+}
+
+void Engine::closeCamera() {
+	if (cameraInitialized_) {
+		grabber_.close();
+		cameraInitialized_ = false;
+	}
+}
+
+GLuint Engine::getCameraTextureID() const {
+	if (cameraInitialized_) {
+		return grabber_.getTexture().getTextureData().textureID;
+	}
+	return 0;
 }
 
 // Video controls
@@ -270,6 +353,36 @@ void Engine::renderVideo() {
 	ofDrawBitmapString(label, x, y);
 }
 
+void Engine::renderCamera() {
+	ofSetBackgroundColor(ofColor(0, 0, 0));
+	ofSetColor(ofColor(255, 255, 255));
+
+	if (cameraInitialized_) {
+		float w = grabber_.getWidth();
+		float h = grabber_.getHeight();
+		float winW = ofGetWidth();
+		float winH = ofGetHeight();
+		if (w > 0 && h > 0) {
+			float scale = std::min(winW / w, winH / h);
+			float drawW = w * scale;
+			float drawH = h * scale;
+			float x = (winW - drawW) / 2.0f;
+			float y = (winH - drawH) / 2.0f;
+			grabber_.draw(x, y, drawW, drawH);
+		} else {
+			grabber_.draw(0, 0, winW, winH);
+		}
+		return;
+	}
+
+	// Empty state
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = appState_->cameraDeviceNames.empty() ? "No camera found" : "Camera not initialized";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
+}
+
 void Engine::renderProjector(State state) {
 	switch (state) {
 	case State::STATE_IDLE:
@@ -283,6 +396,9 @@ void Engine::renderProjector(State state) {
 		break;
 	case State::STATE_VIDEO:
 		renderVideo();
+		break;
+	case State::STATE_CAMERA:
+		renderCamera();
 		break;
 	default:
 		ofSetBackgroundColor(ofColor(46, 52, 64));
