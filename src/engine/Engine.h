@@ -33,6 +33,13 @@ public:
 	void scanCameraDevices();
 	GLuint getCameraTextureID() const;
 
+	// Sound controls
+	void scanSounds();
+	void playSound();
+	void stopSound();
+	void setSoundVolume(float volume);
+	const std::vector<float>& getSoundFFT();
+
 	ofEvent<State> onRequestState;
 
 private:
@@ -45,6 +52,9 @@ private:
 	State previousState_ = State::STATE_IDLE;
 	ofVideoGrabber grabber_;
 	bool cameraInitialized_ = false;
+	ofSoundPlayer soundPlayer_;
+	std::string lastSoundPath_;
+	std::vector<float> fft_;
 
 	void loadCurrentVideo();
 
@@ -53,4 +63,5 @@ private:
 	void renderImage();
 	void renderVideo();
 	void renderCamera();
+	void renderSound();
 };

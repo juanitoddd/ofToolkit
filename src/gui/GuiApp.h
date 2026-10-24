@@ -30,6 +30,7 @@ public:
 	void drawImagePanel();
 	void drawVideoPanel();
 	void drawCameraPanel();
+	void drawSoundPanel();
 
 	bool show_test_window;
 	bool show_another_window;
@@ -50,4 +51,5 @@ private:
 	bool videoSeekDragging_ = false;
 	int lastCameraDeviceIndex_ = -1;
 	int lastCameraResolutionIndex_ = -1;
+	int lastSoundIndex_ = -1;
 };

@@ -52,6 +52,10 @@ public:
 	int cameraDeviceIndex = 0;
 	int cameraResolutionIndex = 1; // default 640x480
 
+	// STATE_SOUND properties
+	std::vector<std::string> soundPaths;
+	int soundIndex = 0;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);

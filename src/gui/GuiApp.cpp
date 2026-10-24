@@ -305,6 +305,82 @@ void GuiApp::drawCameraPanel() {
 	ImGui::End();
 }
 
+void GuiApp::drawSoundPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 450), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Sound Player");
+
+	if (appState->soundPaths.empty()) {
+		ImGui::TextDisabled("No sounds found. Drop files into bin/data/sounds/");
+	} else {
+		// File list
+		ImGui::Text("Files (%lu):", appState->soundPaths.size());
+		if (ImGui::BeginListBox("##sounds", ImVec2(-1, 100))) {
+			for (int i = 0; i < static_cast<int>(appState->soundPaths.size()); ++i) {
+				bool selected = (appState->soundIndex == i);
+				std::string label = ofFilePath::getFileName(appState->soundPaths[i]);
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					appState->soundIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndListBox();
+		}
+
+		// Stop current sound when selection changes
+		if (appState->soundIndex != lastSoundIndex_) {
+			lastSoundIndex_ = appState->soundIndex;
+			engine_->stopSound();
+		}
+
+		// Playback controls
+		ImGui::Separator();
+		if (ImGui::Button("Play")) {
+			engine_->playSound();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Stop")) {
+			engine_->stopSound();
+		}
+
+		// Volume
+		static float soundVolume = 1.0f;
+		if (ImGui::SliderFloat("Volume", &soundVolume, 0.0f, 1.0f, "%.2f")) {
+			engine_->setSoundVolume(soundVolume);
+		}
+
+		// FFT visualizer
+		ImGui::Separator();
+		ImGui::Text("Visualizer:");
+		const std::vector<float>& fft = engine_->getSoundFFT();
+		if (!fft.empty()) {
+			float availW = ImGui::GetContentRegionAvail().x - 10.0f;
+			float barW = availW / static_cast<float>(fft.size());
+			float height = 120.0f;
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			ImVec2 canvasPos = ImGui::GetCursorScreenPos();
+			for (size_t i = 0; i < fft.size(); ++i) {
+				float h = fft[i] * height * 3.0f;
+				h = std::min(h, height);
+				ImVec2 pMin(
+					canvasPos.x + i * barW + 1.0f,
+					canvasPos.y + height - h
+				);
+				ImVec2 pMax(
+					canvasPos.x + (i + 1) * barW - 1.0f,
+					canvasPos.y + height
+				);
+				ImU32 col = ImColor(129, 199, 132);
+				drawList->AddRectFilled(pMin, pMax, col);
+			}
+			ImGui::Dummy(ImVec2(0, height + 5));
+		}
+	}
+
+	ImGui::End();
+}
+
 void GuiApp::draw() {
 	ofSetBackgroundColor(backgroundColor);
 
@@ -357,6 +433,11 @@ void GuiApp::draw() {
 	// STATE_CAMERA panel
 	if (appState->mode == State::STATE_CAMERA) {
 		drawCameraPanel();
+	}
+
+	// STATE_SOUND panel
+	if (appState->mode == State::STATE_SOUND) {
+		drawSoundPanel();
 	}
 
 	gui.end();
