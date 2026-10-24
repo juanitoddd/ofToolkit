@@ -28,6 +28,7 @@ public:
 	void gotMessage(ofMessage msg) override;
 	void drawTextPanel();
 	void drawImagePanel();
+	void drawVideoPanel();
 
 	bool show_test_window;
 	bool show_another_window;
@@ -44,4 +45,6 @@ private:
 	char textBuffer_[1024] = "Hello, World!";
 	ofImage thumbnailImage_;
 	int lastImageIndex_ = -1;
+	int lastVideoIndex_ = -1;
+	bool videoSeekDragging_ = false;
 };

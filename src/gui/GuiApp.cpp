@@ -137,6 +137,82 @@ void GuiApp::drawImagePanel() {
 	ImGui::End();
 }
 
+void GuiApp::drawVideoPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 350), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Video Player");
+
+	if (appState->videoPaths.empty()) {
+		ImGui::TextDisabled("No videos found. Drop files into bin/data/videos/");
+	} else {
+		// File list
+		ImGui::Text("Files (%lu):", appState->videoPaths.size());
+		if (ImGui::BeginListBox("##videos", ImVec2(-1, 100))) {
+			for (int i = 0; i < static_cast<int>(appState->videoPaths.size()); ++i) {
+				bool selected = (appState->videoIndex == i);
+				std::string label = ofFilePath::getFileName(appState->videoPaths[i]);
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					appState->videoIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndListBox();
+		}
+
+		// Stop current video when selection changes
+		if (appState->videoIndex != lastVideoIndex_) {
+			lastVideoIndex_ = appState->videoIndex;
+			engine_->stopVideo();
+			videoSeekDragging_ = false;
+		}
+
+		// Playback controls
+		ImGui::Separator();
+		if (ImGui::Button("Play")) {
+			engine_->playVideo();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Pause")) {
+			engine_->pauseVideo();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Stop")) {
+			engine_->stopVideo();
+		}
+
+		// Volume
+		static float volume = 1.0f;
+		if (ImGui::SliderFloat("Volume", &volume, 0.0f, 1.0f, "%.2f")) {
+			engine_->setVideoVolume(volume);
+		}
+
+		// Seek bar
+		static float draggedSeek = 0.0f;
+		if (!videoSeekDragging_) {
+			draggedSeek = engine_->getVideoPosition();
+		}
+		if (ImGui::SliderFloat("Seek", &draggedSeek, 0.0f, 1.0f, "")) {
+			videoSeekDragging_ = true;
+		}
+		if (ImGui::IsItemDeactivatedAfterEdit()) {
+			engine_->seekVideo(draggedSeek);
+			videoSeekDragging_ = false;
+		}
+
+		// Time labels
+		float pos = engine_->getVideoPosition();
+		float dur = engine_->getVideoDuration();
+		int posMins = static_cast<int>(pos * dur) / 60;
+		int posSecs = static_cast<int>(pos * dur) % 60;
+		int durMins = static_cast<int>(dur) / 60;
+		int durSecs = static_cast<int>(dur) % 60;
+		ImGui::Text("%d:%02d / %d:%02d", posMins, posSecs, durMins, durSecs);
+	}
+
+	ImGui::End();
+}
+
 void GuiApp::draw() {
 	ofSetBackgroundColor(backgroundColor);
 
@@ -179,6 +255,11 @@ void GuiApp::draw() {
 	// STATE_IMAGE panel
 	if (appState->mode == State::STATE_IMAGE) {
 		drawImagePanel();
+	}
+
+	// STATE_VIDEO panel
+	if (appState->mode == State::STATE_VIDEO) {
+		drawVideoPanel();
 	}
 
 	gui.end();

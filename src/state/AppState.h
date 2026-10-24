@@ -42,6 +42,10 @@ public:
 	std::vector<std::string> imagePaths;
 	int imageIndex = 0;
 
+	// STATE_VIDEO properties
+	std::vector<std::string> videoPaths;
+	int videoIndex = 0;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);
