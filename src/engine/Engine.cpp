@@ -20,6 +20,11 @@ void Engine::setup() {
 		ofLogWarning("Engine") << "No videos found in bin/data/videos/";
 	}
 	scanCameraDevices();
+	scanSounds();
+	if (appState_->soundPaths.empty()) {
+		ofLogWarning("Engine") << "No sounds found in bin/data/sounds/";
+	}
+	fft_.assign(128, 0.0f);
 }
 
 void Engine::update() {
@@ -37,6 +42,13 @@ void Engine::update() {
 		closeCamera();
 	}
 
+	// Stop sound when switching away from STATE_SOUND
+	if (previousState_ == State::STATE_SOUND && current != State::STATE_SOUND) {
+		if (soundPlayer_.isLoaded()) {
+			soundPlayer_.stop();
+		}
+	}
+
 	// Init/start camera when entering STATE_CAMERA
 	if (current == State::STATE_CAMERA) {
 		if (!cameraInitialized_) {
@@ -50,6 +62,19 @@ void Engine::update() {
 	// Update video player
 	if (current == State::STATE_VIDEO && videoPlayer_.isLoaded()) {
 		videoPlayer_.update();
+	}
+
+	// Update sound FFT when in STATE_SOUND
+	if (current == State::STATE_SOUND && soundPlayer_.isPlaying()) {
+		float* spectrum = ofSoundGetSpectrum(128);
+		for (size_t i = 0; i < 128; ++i) {
+			fft_[i] = spectrum[i];
+		}
+	} else {
+		// Decay FFT bars when not playing
+		for (auto& v : fft_) {
+			v *= 0.95f;
+		}
 	}
 
 	previousState_ = current;
@@ -121,6 +146,23 @@ void Engine::scanCameraDevices() {
 	}
 }
 
+void Engine::scanSounds() {
+	ofDirectory dir("sounds");
+	dir.allowExt("mp3");
+	dir.allowExt("wav");
+	dir.allowExt("aiff");
+	dir.allowExt("aif");
+	dir.allowExt("flac");
+	dir.allowExt("ogg");
+	dir.allowExt("oga");
+	dir.listDir();
+	appState_->soundPaths.clear();
+	for (size_t i = 0; i < dir.size(); ++i) {
+		appState_->soundPaths.push_back(dir.getPath(i));
+	}
+	appState_->soundIndex = 0;
+}
+
 // Camera controls
 void Engine::initCamera() {
 	if (appState_->cameraDeviceNames.empty()) {
@@ -168,6 +210,38 @@ GLuint Engine::getCameraTextureID() const {
 		return grabber_.getTexture().getTextureData().textureID;
 	}
 	return 0;
+}
+
+// Sound controls
+void Engine::playSound() {
+	int idx = appState_->soundIndex;
+	if (appState_->soundPaths.empty() || idx < 0 || idx >= static_cast<int>(appState_->soundPaths.size())) {
+		return;
+	}
+	const std::string& path = appState_->soundPaths[idx];
+	if (lastSoundPath_ != path || !soundPlayer_.isLoaded()) {
+		soundPlayer_.load(path);
+		lastSoundPath_ = path;
+	}
+	if (soundPlayer_.isLoaded()) {
+		soundPlayer_.play();
+	}
+}
+
+void Engine::stopSound() {
+	if (soundPlayer_.isLoaded()) {
+		soundPlayer_.stop();
+	}
+}
+
+void Engine::setSoundVolume(float volume) {
+	if (soundPlayer_.isLoaded()) {
+		soundPlayer_.setVolume(ofClamp(volume, 0.0f, 1.0f));
+	}
+}
+
+const std::vector<float>& Engine::getSoundFFT() {
+	return fft_;
 }
 
 // Video controls
@@ -383,6 +457,42 @@ void Engine::renderCamera() {
 	ofDrawBitmapString(label, x, y);
 }
 
+void Engine::renderSound() {
+	ofSetBackgroundColor(ofColor(46, 52, 64));
+
+	int idx = appState_->soundIndex;
+	if (!appState_->soundPaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->soundPaths.size())) {
+		// Draw FFT bars
+		int nBins = static_cast<int>(fft_.size());
+		if (nBins > 0) {
+			ofSetColor(ofColor(129, 199, 132)); // green
+			float winW = ofGetWidth();
+			float winH = ofGetHeight();
+			float barW = winW / nBins * 0.8f;
+			float spacing = winW / nBins;
+			for (int i = 0; i < nBins; ++i) {
+				float barH = fft_[i] * winH * 2.5f; // scale for visibility
+				float x = 10.0f + i * spacing;
+				float y = winH - barH;
+				ofDrawRectangle(x, y, barW, barH);
+			}
+		}
+
+		// Draw label
+		ofSetColor(ofColor(216, 222, 233));
+		std::string name = ofFilePath::getFileName(appState_->soundPaths[idx]);
+		ofDrawBitmapString(name, 10, 20);
+		return;
+	}
+
+	// Empty state
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = "No sounds found";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
+}
+
 void Engine::renderProjector(State state) {
 	switch (state) {
 	case State::STATE_IDLE:
@@ -399,6 +509,9 @@ void Engine::renderProjector(State state) {
 		break;
 	case State::STATE_CAMERA:
 		renderCamera();
+		break;
+	case State::STATE_SOUND:
+		renderSound();
 		break;
 	default:
 		ofSetBackgroundColor(ofColor(46, 52, 64));
