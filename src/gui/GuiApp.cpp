@@ -381,6 +381,49 @@ void GuiApp::drawSoundPanel() {
 	ImGui::End();
 }
 
+void GuiApp::drawMeshPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 500), ImGuiCond_FirstUseEver);
+	ImGui::Begin("3D Mesh Viewer");
+
+	if (appState->meshPaths.empty()) {
+		ImGui::TextDisabled("No meshes found.");
+	} else {
+		// File/primitive list
+		ImGui::Text("Meshes (%lu):", appState->meshPaths.size());
+		if (ImGui::BeginListBox("##meshes", ImVec2(-1, 120))) {
+			for (int i = 0; i < static_cast<int>(appState->meshPaths.size()); ++i) {
+				bool selected = (appState->meshIndex == i);
+				std::string label;
+				if (appState->meshPaths[i].find("primitive:") == 0) {
+					label = appState->meshPaths[i].substr(10);
+				} else {
+					label = ofFilePath::getFileName(appState->meshPaths[i]);
+				}
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					appState->meshIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndListBox();
+		}
+
+		// Wireframe toggle
+		ImGui::Separator();
+		ImGui::Checkbox("Wireframe", &appState->meshWireframe);
+
+		// Orbit controls
+		ImGui::Text("Orbit:");
+		ImGui::SliderFloat("Rotate X", &appState->meshRotX, -180.0f, 180.0f);
+		ImGui::SliderFloat("Rotate Y", &appState->meshRotY, -180.0f, 180.0f);
+		ImGui::SliderFloat("Rotate Z", &appState->meshRotZ, -180.0f, 180.0f);
+		ImGui::SliderFloat("Zoom", &appState->meshZoom, 0.1f, 5.0f, "%.2f");
+	}
+
+	ImGui::End();
+}
+
 void GuiApp::draw() {
 	ofSetBackgroundColor(backgroundColor);
 
@@ -438,6 +481,11 @@ void GuiApp::draw() {
 	// STATE_SOUND panel
 	if (appState->mode == State::STATE_SOUND) {
 		drawSoundPanel();
+	}
+
+	// STATE_MESH panel
+	if (appState->mode == State::STATE_MESH) {
+		drawMeshPanel();
 	}
 
 	gui.end();

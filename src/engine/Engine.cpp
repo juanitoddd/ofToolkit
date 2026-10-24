@@ -24,7 +24,16 @@ void Engine::setup() {
 	if (appState_->soundPaths.empty()) {
 		ofLogWarning("Engine") << "No sounds found in bin/data/sounds/";
 	}
+	scanMeshes();
 	fft_.assign(128, 0.0f);
+
+	// 3D lighting setup
+	light1_.setPosition(200, 200, 200);
+	light1_.setDiffuseColor(ofColor(255, 255, 255));
+	light1_.enable();
+	light2_.setPosition(-200, -200, 200);
+	light2_.setDiffuseColor(ofColor(200, 200, 220));
+	light2_.enable();
 }
 
 void Engine::update() {
@@ -161,6 +170,24 @@ void Engine::scanSounds() {
 		appState_->soundPaths.push_back(dir.getPath(i));
 	}
 	appState_->soundIndex = 0;
+}
+
+void Engine::scanMeshes() {
+	ofDirectory dir("meshes");
+	dir.allowExt("ply");
+	dir.allowExt("obj");
+	dir.allowExt("stl");
+	dir.listDir();
+	appState_->meshPaths.clear();
+	for (size_t i = 0; i < dir.size(); ++i) {
+		appState_->meshPaths.push_back(dir.getPath(i));
+	}
+	// Always add built-in primitives at the end
+	meshPrimitiveNames_ = { "Box", "Sphere", "Cone", "Cylinder", "Plane" };
+	for (const auto& name : meshPrimitiveNames_) {
+		appState_->meshPaths.push_back("primitive:" + name);
+	}
+	appState_->meshIndex = 0;
 }
 
 // Camera controls
@@ -493,6 +520,104 @@ void Engine::renderSound() {
 	ofDrawBitmapString(label, x, y);
 }
 
+void Engine::drawPrimitiveMesh(const std::string& name) {
+	if (name == "Box") {
+		ofDrawBox(0, 0, 0, 200);
+	} else if (name == "Sphere") {
+		ofDrawSphere(0, 0, 0, 120);
+	} else if (name == "Cone") {
+		ofDrawCone(0, 0, 0, 100, 200);
+	} else if (name == "Cylinder") {
+		ofDrawCylinder(0, 0, 0, 80, 200);
+	} else if (name == "Plane") {
+		ofDrawPlane(0, 0, 0, 300, 300);
+	}
+}
+
+void Engine::renderMesh() {
+	ofSetBackgroundColor(ofColor(40, 44, 52));
+	ofEnableDepthTest();
+
+	// Camera
+	float winW = ofGetWidth();
+	float winH = ofGetHeight();
+	ofPushView();
+	ofViewport(0, 0, winW, winH);
+	ofSetupScreenPerspective(winW, winH, 60, 0.1f, 10000.0f);
+
+	// Apply orbit transformations
+	float zoom = appState_->meshZoom;
+	ofTranslate(winW / 2.0f, winH / 2.0f, 0);
+	ofScale(zoom, zoom, zoom);
+	ofRotateDeg(appState_->meshRotX, 1, 0, 0);
+	ofRotateDeg(appState_->meshRotY, 0, 1, 0);
+	ofRotateDeg(appState_->meshRotZ, 0, 0, 1);
+
+	// Lighting
+	ofEnableLighting();
+	light1_.enable();
+	light2_.enable();
+
+	int idx = appState_->meshIndex;
+	if (!appState_->meshPaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->meshPaths.size())) {
+		const std::string& path = appState_->meshPaths[idx];
+		ofSetColor(ofColor(200, 200, 210));
+		ofFill();
+
+		bool isPrimitive = (path.find("primitive:") == 0);
+		if (isPrimitive) {
+			// Built-in primitive
+			if (appState_->meshWireframe) {
+				ofNoFill();
+				ofSetColor(ofColor(129, 199, 132)); // green wireframe
+			}
+			drawPrimitiveMesh(path.substr(10));
+		} else {
+			// File-based mesh
+			if (lastMeshPath_ != path) {
+				loadedMesh_.load(path);
+				lastMeshPath_ = path;
+				meshLoaded_ = loadedMesh_.getVertices().size() > 0;
+			}
+			if (meshLoaded_) {
+				if (appState_->meshWireframe) {
+					ofSetColor(ofColor(129, 199, 132));
+					loadedMesh_.drawWireframe();
+				} else {
+					loadedMesh_.draw();
+				}
+			} else {
+				// Fallback to box if load failed
+				if (appState_->meshWireframe) {
+					ofNoFill();
+					ofSetColor(ofColor(129, 199, 132));
+				}
+				ofDrawBox(0, 0, 0, 200);
+			}
+		}
+
+		// Draw label
+		ofPopView();
+		ofDisableDepthTest();
+		ofDisableLighting();
+		ofSetColor(ofColor(216, 222, 233));
+		std::string displayName = isPrimitive ? path.substr(10) : ofFilePath::getFileName(path);
+		ofDrawBitmapString(displayName, 10, 20);
+		return;
+	}
+
+	ofPopView();
+	ofDisableDepthTest();
+	ofDisableLighting();
+
+	// Empty state
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = "No meshes found";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
+}
+
 void Engine::renderProjector(State state) {
 	switch (state) {
 	case State::STATE_IDLE:
@@ -512,6 +637,9 @@ void Engine::renderProjector(State state) {
 		break;
 	case State::STATE_SOUND:
 		renderSound();
+		break;
+	case State::STATE_MESH:
+		renderMesh();
 		break;
 	default:
 		ofSetBackgroundColor(ofColor(46, 52, 64));

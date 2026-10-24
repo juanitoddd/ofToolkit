@@ -11,6 +11,8 @@ public:
 		, engine_(std::move(engine)) { }
 	void setup() override;
 	void draw() override;
+	void mouseDragged(int x, int y, int button) override;
+	void mouseScrolled(int x, int y, float scrollX, float scrollY) override;
 	void onStateChanged(int & index);
 
 	ofColor backgroundColor = ofColor(46, 52, 64);

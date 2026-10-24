@@ -31,6 +31,7 @@ public:
 	void drawVideoPanel();
 	void drawCameraPanel();
 	void drawSoundPanel();
+	void drawMeshPanel();
 
 	bool show_test_window;
 	bool show_another_window;
@@ -52,4 +53,10 @@ private:
 	int lastCameraDeviceIndex_ = -1;
 	int lastCameraResolutionIndex_ = -1;
 	int lastSoundIndex_ = -1;
+	int lastMeshIndex_ = -1;
+	bool meshDragging_ = false;
+	float meshDragStartX_ = 0.0f;
+	float meshDragStartY_ = 0.0f;
+	float meshRotXStart_ = 0.0f;
+	float meshRotYStart_ = 0.0f;
 };
