@@ -31,8 +31,7 @@ int main() {
 
 	auto projectorWindow = ofCreateWindow(projectorSettings);
 
-	// TODO: Setup engine after GL context is created (required for FBO allocation)
-	// engine->setup();
+	engine->setup();
 
 	ofRunApp(guiWindow, std::make_shared<GuiApp>(state, engine));
 	ofRunApp(projectorWindow, std::make_shared<ProjectorApp>(state, engine));
