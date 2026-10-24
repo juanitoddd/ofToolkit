@@ -4,9 +4,15 @@ void GuiApp::setup() {
 	ofSetVerticalSync(true);
 	ofSetFrameRate(60);
 	gui.setup();
+	ofLogNotice() << "Dear ImGui version: " << ImGui::GetVersion();
+	ofLogNotice() << "OpenGL version: " << (const char *)glGetString(GL_VERSION);
+	ofLogNotice() << "OpenGL renderer: " << (const char *)glGetString(GL_RENDERER);
+	ImGuiIO & io = ImGui::GetIO();
+	ofLogNotice() << "ImGui renderer backend: " << (io.BackendRendererName ? io.BackendRendererName : "Not initialized");
+	ofLogNotice() << "ImGui platform backend: " << (io.BackendPlatformName ? io.BackendPlatformName : "Not initialized");
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::GetIO().MouseDrawCursor = false;
-
+	ofDisableArbTex(); // Before loading the image
 	// Initialize text buffer from shared state
 	strncpy(textBuffer_, appState->textContent.c_str(), sizeof(textBuffer_) - 1);
 	textBuffer_[sizeof(textBuffer_) - 1] = '\0';
@@ -39,8 +45,7 @@ void GuiApp::drawTextPanel() {
 			color[0] * 255.0f,
 			color[1] * 255.0f,
 			color[2] * 255.0f,
-			color[3] * 255.0f
-		);
+			color[3] * 255.0f);
 	}
 
 	// Font dropdown
@@ -71,8 +76,7 @@ void GuiApp::drawTextPanel() {
 		appState->textColor.r / 255.0f,
 		appState->textColor.g / 255.0f,
 		appState->textColor.b / 255.0f,
-		appState->textColor.a / 255.0f
-	);
+		appState->textColor.a / 255.0f);
 	ImGui::PushStyleColor(ImGuiCol_Text, previewColor);
 	ImGui::TextWrapped("%s", appState->textContent.c_str());
 	ImGui::PopStyleColor();
@@ -107,6 +111,7 @@ void GuiApp::drawImagePanel() {
 		if (appState->imageIndex != lastImageIndex_) {
 			lastImageIndex_ = appState->imageIndex;
 			if (appState->imageIndex >= 0 && appState->imageIndex < static_cast<int>(appState->imagePaths.size())) {
+				ofLogNotice("GuiApp") << "imagePaths: " << appState->imagePaths[appState->imageIndex];
 				thumbnailImage_.load(appState->imagePaths[appState->imageIndex]);
 			}
 		}
@@ -122,7 +127,10 @@ void GuiApp::drawImagePanel() {
 			float scale = std::min(maxW / w, 300.0f / h);
 			float drawW = w * scale;
 			float drawH = h * scale;
-			ImGui::Image((ImTextureID)(uintptr_t)thumbnailImage_.getTexture().getTextureData().textureID, ImVec2(drawW, drawH));
+			GLuint textureID = thumbnailImage_.getTexture().getTextureData().textureID;
+			ImTextureID id = (ImTextureID)(intptr_t)textureID;
+			ImTextureRef ref(id);
+			ImGui::Image(ref, ImVec2(drawW, drawH));
 		}
 	}
 
