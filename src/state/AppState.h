@@ -32,6 +32,12 @@ public:
 	// Debug HUD toggle (cross-cutting)
 	bool showDebugHud = true;
 
+	// STATE_TEXT properties
+	std::string textContent = "Hello, World!";
+	ofColor textColor = ofColor(255, 255, 255);
+	std::vector<std::string> fontPaths;
+	int fontIndex = 0;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);

@@ -6,10 +6,78 @@ void GuiApp::setup() {
 	gui.setup();
 	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	ImGui::GetIO().MouseDrawCursor = false;
+
+	// Initialize text buffer from shared state
+	strncpy(textBuffer_, appState->textContent.c_str(), sizeof(textBuffer_) - 1);
+	textBuffer_[sizeof(textBuffer_) - 1] = '\0';
 }
 
 void GuiApp::update() {
 	engine_->update();
+}
+
+void GuiApp::drawTextPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Text Editor");
+
+	// Text input
+	ImGui::Text("Content:");
+	if (ImGui::InputTextMultiline("##text", textBuffer_, sizeof(textBuffer_), ImVec2(-1, 80))) {
+		appState->textContent = textBuffer_;
+	}
+
+	// Color picker
+	ImGui::Text("Color:");
+	float color[4] = {
+		appState->textColor.r / 255.0f,
+		appState->textColor.g / 255.0f,
+		appState->textColor.b / 255.0f,
+		appState->textColor.a / 255.0f
+	};
+	if (ImGui::ColorEdit4("##color", color)) {
+		appState->textColor = ofColor(
+			color[0] * 255.0f,
+			color[1] * 255.0f,
+			color[2] * 255.0f,
+			color[3] * 255.0f
+		);
+	}
+
+	// Font dropdown
+	ImGui::Text("Font:");
+	if (appState->fontPaths.empty()) {
+		ImGui::TextDisabled("No fonts found. Drop .ttf/.otf files into bin/data/fonts/");
+	} else {
+		std::string preview = appState->fontPaths.empty() ? "None" : ofFilePath::getFileName(appState->fontPaths[appState->fontIndex]);
+		if (ImGui::BeginCombo("##font", preview.c_str())) {
+			for (int i = 0; i < static_cast<int>(appState->fontPaths.size()); ++i) {
+				bool selected = (appState->fontIndex == i);
+				std::string label = ofFilePath::getFileName(appState->fontPaths[i]);
+				if (ImGui::Selectable(label.c_str(), selected)) {
+					appState->fontIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+	}
+
+	// Live preview
+	ImGui::Separator();
+	ImGui::Text("Preview:");
+	ImVec4 previewColor(
+		appState->textColor.r / 255.0f,
+		appState->textColor.g / 255.0f,
+		appState->textColor.b / 255.0f,
+		appState->textColor.a / 255.0f
+	);
+	ImGui::PushStyleColor(ImGuiCol_Text, previewColor);
+	ImGui::TextWrapped("%s", appState->textContent.c_str());
+	ImGui::PopStyleColor();
+
+	ImGui::End();
 }
 
 void GuiApp::draw() {
@@ -44,6 +112,11 @@ void GuiApp::draw() {
 		ImGui::Text("Window: %dx%d", ofGetWidth(), ofGetHeight());
 		ImGui::Text("State: %s", appState->toString(appState->mode).data());
 		ImGui::End();
+	}
+
+	// STATE_TEXT panel
+	if (appState->mode == State::STATE_TEXT) {
+		drawTextPanel();
 	}
 
 	gui.end();

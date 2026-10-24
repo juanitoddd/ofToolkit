@@ -26,6 +26,7 @@ public:
 	void windowResized(int w, int h) override;
 	void dragEvent(ofDragInfo dragInfo) override;
 	void gotMessage(ofMessage msg) override;
+	void drawTextPanel();
 
 	bool show_test_window;
 	bool show_another_window;
@@ -39,4 +40,5 @@ private:
 	ofImage cameraImage_;
 	ofFbo cameraPreviewFbo_;
 	bool debugDrawCamera_ = false;
+	char textBuffer_[1024] = "Hello, World!";
 };
