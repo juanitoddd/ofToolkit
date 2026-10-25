@@ -1,6 +1,8 @@
 #pragma once
 #include "../state/AppState.h"
 #include "ofMain.h"
+#include "ofxNDIreceiver.h"
+#include "ofxNDIsender.h"
 #include <memory>
 #include <string>
 
@@ -44,6 +46,13 @@ public:
 	void scanMeshes();
 	void renderMesh();
 
+	// NDI controls
+	void scanNDISources();
+	void openNDIReceiver();
+	void closeNDIReceiver();
+	void startNDISender();
+	void stopNDISender();
+
 	ofEvent<State> onRequestState;
 
 private:
@@ -65,6 +74,13 @@ private:
 	std::string lastMeshPath_;
 	bool meshLoaded_ = false;
 	std::vector<std::string> meshPrimitiveNames_;
+	ofxNDIreceiver ndiReceiver_;
+	ofxNDIsender ndiSender_;
+	ofTexture ndiRecvTexture_;
+	ofFbo ndiSendFbo_;
+	bool ndiRecvOpened_ = false;
+	bool ndiSenderCreated_ = false;
+	uint64_t lastNdiRefreshTime_ = 0;
 
 	void loadCurrentVideo();
 
@@ -74,5 +90,7 @@ private:
 	void renderVideo();
 	void renderCamera();
 	void renderSound();
+	void renderNDIRecv();
+	void renderNDISend();
 	void drawPrimitiveMesh(const std::string& name);
 };
