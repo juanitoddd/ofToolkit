@@ -21,6 +21,8 @@ from `src/state/AppState.h`, we have following states that represent use cases:
 - STATE_CAMERA
 - STATE_SOUND
 - STATE_MESH
+- STATE_NDI_RECV
+- STATE_NDI_SEND
 
 And may be subject to more use cases.
 
@@ -51,6 +53,14 @@ Loads a list of image files from `bin/data/sounds` and using a floating window t
 #### STATE_MESH
 
 A simple 3D Viewer with orbit controls.
+
+#### STATE_NDI_RECV
+
+Receives an NDI stream from the network. The GuiApp shows a source discovery list and connection controls. The ProjectorApp renders the received stream full-screen.
+
+#### STATE_NDI_SEND
+
+Broadcasts the ProjectorApp output as an NDI stream. The GuiApp shows sender controls (name, start/stop, connection count). The sender captures the ProjectorApp FBO and transmits it over the network.
 
 ### Engine
 

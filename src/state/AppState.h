@@ -10,10 +10,12 @@ enum State {
 	STATE_VIDEO,
 	STATE_CAMERA,
 	STATE_SOUND,
-	STATE_MESH
+	STATE_MESH,
+	STATE_NDI_RECV,
+	STATE_NDI_SEND
 };
 
-inline constexpr std::array<std::string_view, 8> StateNames = {
+inline constexpr std::array<std::string_view, 10> StateNames = {
 	"Idle",
 	"Text",
 	"Image",
@@ -21,6 +23,8 @@ inline constexpr std::array<std::string_view, 8> StateNames = {
 	"Camera",
 	"Sound",
 	"Mesh",
+	"NDI Recv",
+	"NDI Send",
 };
 
 class AppState {
@@ -64,6 +68,16 @@ public:
 	float meshRotZ = 0.0f;
 	float meshZoom = 1.0f;
 	bool meshWireframe = false;
+
+	// STATE_NDI_RECV properties
+	std::vector<std::string> ndiSourceNames;
+	int ndiSourceIndex = 0;
+	bool ndiRecvConnected = false;
+
+	// STATE_NDI_SEND properties
+	std::string ndiSendName = "ofToolkit Sender";
+	bool ndiSendActive = false;
+	int ndiSendConnections = 0;
 
 	// Get State names
 	inline std::string_view toString(State mode) {

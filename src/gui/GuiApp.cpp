@@ -433,7 +433,7 @@ void GuiApp::draw() {
 	if (ImGui::BeginMainMenuBar()) {
 		ImGui::Text("| %s |", appState->toString(appState->mode).data());
 		if (ImGui::BeginMenu("State")) {
-			for (int i = 0; i <= static_cast<int>(State::STATE_MESH); ++i) {
+			for (int i = 0; i <= static_cast<int>(State::STATE_NDI_SEND); ++i) {
 				State state = static_cast<State>(i);
 				if (ImGui::MenuItem(appState->toString(state).data())) {
 					appState->setState(static_cast<int>(state));
@@ -488,7 +488,103 @@ void GuiApp::draw() {
 		drawMeshPanel();
 	}
 
+	// STATE_NDI_RECV panel
+	if (appState->mode == State::STATE_NDI_RECV) {
+		drawNDIRecvPanel();
+	}
+
+	// STATE_NDI_SEND panel
+	if (appState->mode == State::STATE_NDI_SEND) {
+		drawNDISendPanel();
+	}
+
 	gui.end();
+}
+
+void GuiApp::drawNDIRecvPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 450), ImGuiCond_FirstUseEver);
+	ImGui::Begin("NDI Receiver");
+
+	// Refresh sources button
+	if (ImGui::Button("Refresh Sources")) {
+		engine_->scanNDISources();
+	}
+	ImGui::SameLine();
+	if (appState->ndiRecvConnected) {
+		ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connected");
+	} else {
+		ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Disconnected");
+	}
+
+	if (appState->ndiSourceNames.empty()) {
+		ImGui::TextDisabled("No NDI sources found on the network.");
+	} else {
+		ImGui::Text("Sources (%lu):", appState->ndiSourceNames.size());
+		if (ImGui::BeginListBox("##ndiSources", ImVec2(-1, 120))) {
+			for (int i = 0; i < static_cast<int>(appState->ndiSourceNames.size()); ++i) {
+				bool selected = (appState->ndiSourceIndex == i);
+				if (ImGui::Selectable(appState->ndiSourceNames[i].c_str(), selected)) {
+					appState->ndiSourceIndex = i;
+				}
+				if (selected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndListBox();
+		}
+
+		if (ImGui::Button("Connect")) {
+			engine_->openNDIReceiver();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Disconnect")) {
+			engine_->closeNDIReceiver();
+		}
+	}
+
+	// Preview
+	GLuint texID = engine_->getCameraTextureID(); // placeholder - receiver doesn't expose texture ID directly
+	// We'll skip the preview since the receiver texture is managed internally
+	// The user can see the full-screen output on the ProjectorApp
+
+	ImGui::End();
+}
+
+void GuiApp::drawNDISendPanel() {
+	ImGui::SetNextWindowSize(ofVec2f(400, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("NDI Sender");
+
+	// Sender name
+	char nameBuf[256];
+	strncpy(nameBuf, appState->ndiSendName.c_str(), sizeof(nameBuf) - 1);
+	nameBuf[sizeof(nameBuf) - 1] = '\0';
+	ImGui::Text("Sender Name:");
+	if (ImGui::InputText("##ndiName", nameBuf, sizeof(nameBuf))) {
+		appState->ndiSendName = nameBuf;
+	}
+
+	// Controls
+	ImGui::Separator();
+	if (!appState->ndiSendActive) {
+		if (ImGui::Button("Start Broadcasting")) {
+			engine_->startNDISender();
+		}
+	} else {
+		if (ImGui::Button("Stop Broadcasting")) {
+			engine_->stopNDISender();
+		}
+	}
+
+	// Status
+	ImGui::Separator();
+	if (appState->ndiSendActive) {
+		ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Broadcasting");
+		ImGui::Text("Connections: %d", appState->ndiSendConnections);
+	} else {
+		ImGui::TextDisabled("Not broadcasting");
+	}
+
+	ImGui::End();
 }
 
 void GuiApp::keyPressed(int key) { }

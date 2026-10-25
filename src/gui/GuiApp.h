@@ -31,6 +31,8 @@ public:
 	void drawVideoPanel();
 	void drawCameraPanel();
 	void drawSoundPanel();
+	void drawNDIRecvPanel();
+	void drawNDISendPanel();
 	void drawMeshPanel();
 
 	bool show_test_window;

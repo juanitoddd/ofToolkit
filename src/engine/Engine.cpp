@@ -27,6 +27,10 @@ void Engine::setup() {
 	scanMeshes();
 	fft_.assign(128, 0.0f);
 
+	// NDI setup
+	ndiReceiver_.OpenReceiver();
+	scanNDISources();
+
 	// 3D lighting setup
 	light1_ = std::make_unique<ofLight>();
 	light1_->setPosition(200, 200, 200);
@@ -86,6 +90,28 @@ void Engine::update() {
 		for (auto& v : fft_) {
 			v *= 0.95f;
 		}
+	}
+
+	// NDI state transitions
+	if (previousState_ == State::STATE_NDI_RECV && current != State::STATE_NDI_RECV) {
+		closeNDIReceiver();
+	}
+	if (previousState_ == State::STATE_NDI_SEND && current != State::STATE_NDI_SEND) {
+		stopNDISender();
+	}
+	if (current == State::STATE_NDI_RECV) {
+		// Refresh NDI sources every 2 seconds
+		uint64_t now = ofGetElapsedTimeMillis();
+		if (now - lastNdiRefreshTime_ > 2000) {
+			lastNdiRefreshTime_ = now;
+			scanNDISources();
+		}
+		if (ndiRecvOpened_ && ndiReceiver_.ReceiverConnected()) {
+			ndiReceiver_.ReceiveImage(ndiRecvTexture_);
+		}
+	}
+	if (current == State::STATE_NDI_SEND && appState_->ndiSendActive && ndiSenderCreated_) {
+		appState_->ndiSendConnections = ndiSender_.GetConnections(0);
 	}
 
 	previousState_ = current;
@@ -190,6 +216,75 @@ void Engine::scanMeshes() {
 		appState_->meshPaths.push_back("primitive:" + name);
 	}
 	appState_->meshIndex = 0;
+}
+
+void Engine::scanNDISources() {
+	if (!ndiReceiver_.OpenReceiver()) {
+		ofLogWarning("Engine") << "NDI receiver not available";
+		return;
+	}
+	ndiReceiver_.RefreshSenders(1000);
+	appState_->ndiSourceNames = ndiReceiver_.GetSenderList();
+	if (appState_->ndiSourceIndex >= static_cast<int>(appState_->ndiSourceNames.size())) {
+		appState_->ndiSourceIndex = 0;
+	}
+}
+
+void Engine::openNDIReceiver() {
+	if (ndiRecvOpened_) return;
+	if (!ndiReceiver_.OpenReceiver()) {
+		ofLogWarning("Engine") << "Failed to open NDI receiver";
+		return;
+	}
+	int idx = appState_->ndiSourceIndex;
+	if (appState_->ndiSourceNames.empty()) {
+		ofLogWarning("Engine") << "No NDI sources to connect to";
+		return;
+	}
+	if (idx < 0 || idx >= static_cast<int>(appState_->ndiSourceNames.size())) {
+		idx = 0;
+		appState_->ndiSourceIndex = 0;
+	}
+	if (ndiReceiver_.CreateReceiver(idx)) {
+		ndiRecvOpened_ = true;
+		appState_->ndiRecvConnected = ndiReceiver_.ReceiverConnected();
+		ofLogNotice("Engine") << "NDI receiver connected to: " << appState_->ndiSourceNames[idx];
+	} else {
+		ofLogWarning("Engine") << "Failed to create NDI receiver for source " << idx;
+	}
+}
+
+void Engine::closeNDIReceiver() {
+	if (ndiRecvOpened_) {
+		ndiReceiver_.ReleaseReceiver();
+		ndiRecvOpened_ = false;
+		appState_->ndiRecvConnected = false;
+	}
+}
+
+void Engine::startNDISender() {
+	if (ndiSenderCreated_) return;
+	int w = 1920;
+	int h = 1080;
+	if (!ndiSendFbo_.isAllocated()) {
+		ndiSendFbo_.allocate(w, h, GL_RGBA);
+	}
+	if (ndiSender_.CreateSender(appState_->ndiSendName.c_str(), w, h)) {
+		ndiSenderCreated_ = true;
+		appState_->ndiSendActive = true;
+		ofLogNotice("Engine") << "NDI sender created: " << appState_->ndiSendName;
+	} else {
+		ofLogWarning("Engine") << "Failed to create NDI sender";
+	}
+}
+
+void Engine::stopNDISender() {
+	if (ndiSenderCreated_) {
+		ndiSender_.ReleaseSender();
+		ndiSenderCreated_ = false;
+		appState_->ndiSendActive = false;
+		appState_->ndiSendConnections = 0;
+	}
 }
 
 // Camera controls
@@ -620,6 +715,79 @@ void Engine::renderMesh() {
 	ofDrawBitmapString(label, x, y);
 }
 
+void Engine::renderNDIRecv() {
+	ofSetBackgroundColor(ofColor(0, 0, 0));
+	ofSetColor(ofColor(255, 255, 255));
+
+	if (ndiRecvOpened_ && ndiRecvTexture_.isAllocated()) {
+		float w = ndiRecvTexture_.getWidth();
+		float h = ndiRecvTexture_.getHeight();
+		float winW = ofGetWidth();
+		float winH = ofGetHeight();
+		if (w > 0 && h > 0) {
+			float scale = std::min(winW / w, winH / h);
+			float drawW = w * scale;
+			float drawH = h * scale;
+			float x = (winW - drawW) / 2.0f;
+			float y = (winH - drawH) / 2.0f;
+			ndiRecvTexture_.draw(x, y, drawW, drawH);
+		} else {
+			ndiRecvTexture_.draw(0, 0, winW, winH);
+		}
+		return;
+	}
+
+	// Not connected / no frame
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = appState_->ndiSourceNames.empty() ? "No NDI sources found" : "Select an NDI source";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
+}
+
+void Engine::renderNDISend() {
+	ofSetBackgroundColor(ofColor(46, 52, 64));
+
+	float winW = ofGetWidth();
+	float winH = ofGetHeight();
+
+	// Render to FBO for NDI broadcast (on-demand, only in this state)
+	if (ndiSenderCreated_ && ndiSendFbo_.isAllocated()) {
+		ndiSendFbo_.begin();
+		ofClear(46, 52, 64, 255);
+		ofSetColor(ofColor(216, 222, 233));
+		// Status screen content
+		std::string title = "NDI Sender";
+		std::string name = "Name: " + appState_->ndiSendName;
+		std::string conn = "Connections: " + std::to_string(appState_->ndiSendConnections);
+		std::string status = appState_->ndiSendActive ? "Broadcasting" : "Idle";
+		float cx = winW / 2.0f;
+		float cy = winH / 2.0f;
+		ofDrawBitmapString(title, cx - title.length() * 4.0f, cy - 40);
+		ofDrawBitmapString(name, cx - name.length() * 4.0f, cy - 10);
+		ofDrawBitmapString(conn, cx - conn.length() * 4.0f, cy + 20);
+		ofSetColor(appState_->ndiSendActive ? ofColor(129, 199, 132) : ofColor(236, 239, 244));
+		ofDrawBitmapString(status, cx - status.length() * 4.0f, cy + 50);
+		ndiSendFbo_.end();
+
+		// Draw FBO to screen
+		ofSetColor(ofColor(255, 255, 255));
+		ndiSendFbo_.draw(0, 0, winW, winH);
+
+		// Send via NDI
+		ndiSender_.SendImage(ndiSendFbo_);
+	} else {
+		ofSetColor(ofColor(216, 222, 233));
+		std::string label = "NDI Sender";
+		std::string sub = appState_->ndiSendActive ? "Broadcasting..." : "Not active";
+		float cx = winW / 2.0f;
+		float cy = winH / 2.0f;
+		ofDrawBitmapString(label, cx - label.length() * 4.0f, cy - 10);
+		ofSetColor(appState_->ndiSendActive ? ofColor(129, 199, 132) : ofColor(128, 128, 128));
+		ofDrawBitmapString(sub, cx - sub.length() * 4.0f, cy + 20);
+	}
+}
+
 void Engine::renderProjector(State state) {
 	switch (state) {
 	case State::STATE_IDLE:
@@ -642,6 +810,12 @@ void Engine::renderProjector(State state) {
 		break;
 	case State::STATE_MESH:
 		renderMesh();
+		break;
+	case State::STATE_NDI_RECV:
+		renderNDIRecv();
+		break;
+	case State::STATE_NDI_SEND:
+		renderNDISend();
 		break;
 	default:
 		ofSetBackgroundColor(ofColor(46, 52, 64));
