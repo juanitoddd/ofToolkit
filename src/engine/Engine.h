@@ -40,6 +40,10 @@ public:
 	void setSoundVolume(float volume);
 	const std::vector<float>& getSoundFFT();
 
+	// Mesh controls
+	void scanMeshes();
+	void renderMesh();
+
 	ofEvent<State> onRequestState;
 
 private:
@@ -55,6 +59,12 @@ private:
 	ofSoundPlayer soundPlayer_;
 	std::string lastSoundPath_;
 	std::vector<float> fft_;
+	std::unique_ptr<ofLight> light1_;
+	std::unique_ptr<ofLight> light2_;
+	ofMesh loadedMesh_;
+	std::string lastMeshPath_;
+	bool meshLoaded_ = false;
+	std::vector<std::string> meshPrimitiveNames_;
 
 	void loadCurrentVideo();
 
@@ -64,4 +74,5 @@ private:
 	void renderVideo();
 	void renderCamera();
 	void renderSound();
+	void drawPrimitiveMesh(const std::string& name);
 };

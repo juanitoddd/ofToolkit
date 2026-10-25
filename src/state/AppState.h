@@ -56,6 +56,15 @@ public:
 	std::vector<std::string> soundPaths;
 	int soundIndex = 0;
 
+	// STATE_MESH properties
+	std::vector<std::string> meshPaths;
+	int meshIndex = 0;
+	float meshRotX = 0.0f;
+	float meshRotY = 0.0f;
+	float meshRotZ = 0.0f;
+	float meshZoom = 1.0f;
+	bool meshWireframe = false;
+
 	// Get State names
 	inline std::string_view toString(State mode) {
 		auto index = static_cast<size_t>(mode);
