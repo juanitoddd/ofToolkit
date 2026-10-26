@@ -540,9 +540,24 @@ void GuiApp::drawNDIRecvPanel() {
 	}
 
 	// Preview
-	GLuint texID = engine_->getCameraTextureID(); // placeholder - receiver doesn't expose texture ID directly
-	// We'll skip the preview since the receiver texture is managed internally
-	// The user can see the full-screen output on the ProjectorApp
+	GLuint texID = engine_->getNDIRecvTextureID();
+	if (texID != 0) {
+		ImGui::Separator();
+		ImGui::Text("Preview:");
+		float maxW = 350.0f;
+		float maxH = 220.0f;
+		// Default 16:9
+		float drawW = maxW;
+		float drawH = maxW * 9.0f / 16.0f;
+		if (drawH > maxH) {
+			float scale = maxH / drawH;
+			drawW *= scale;
+			drawH *= scale;
+		}
+		ImTextureID id = (ImTextureID)(intptr_t)texID;
+		ImTextureRef ref(id);
+		ImGui::Image(ref, ImVec2(drawW, drawH));
+	}
 
 	ImGui::End();
 }

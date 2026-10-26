@@ -51,6 +51,7 @@ public:
 	void disconnectNDISource();
 	void startNDISender();
 	void stopNDISender();
+	GLuint getNDIRecvTextureID() const;
 
 	ofEvent<State> onRequestState;
 
@@ -76,7 +77,7 @@ private:
 
 	ofxNDIreceiver ndiReceiver_;
 	ofxNDIsender ndiSender_;
-	ofTexture ndiRecvTexture_;
+	ofFbo ndiRecvFbo_;
 	ofFbo ndiSendFbo_;
 	bool ndiSenderCreated_ = false;
 	uint64_t lastNdiRefreshTime_ = 0;

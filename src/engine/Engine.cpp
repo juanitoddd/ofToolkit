@@ -106,7 +106,7 @@ void Engine::update() {
 			scanNDISources();
 		}
 		// ReceiveImage lazily creates/opens the receiver internally
-		ndiReceiver_.ReceiveImage(ndiRecvTexture_);
+		ndiReceiver_.ReceiveImage(ndiRecvFbo_);
 		appState_->ndiRecvConnected = ndiReceiver_.ReceiverConnected();
 	}
 	if (current == State::STATE_NDI_SEND && appState_->ndiSendActive && ndiSenderCreated_) {
@@ -245,6 +245,13 @@ void Engine::selectNDISource(int index) {
 void Engine::disconnectNDISource() {
 	ndiReceiver_.ReleaseReceiver();
 	appState_->ndiRecvConnected = false;
+}
+
+GLuint Engine::getNDIRecvTextureID() const {
+	if (ndiRecvFbo_.isAllocated()) {
+		return ndiRecvFbo_.getTexture().getTextureData().textureID;
+	}
+	return 0;
 }
 
 void Engine::startNDISender() {
@@ -704,9 +711,9 @@ void Engine::renderNDIRecv() {
 	ofSetBackgroundColor(ofColor(0, 0, 0));
 	ofSetColor(ofColor(255, 255, 255));
 
-	if (ndiReceiver_.ReceiverCreated() && ndiReceiver_.ReceiverConnected() && ndiRecvTexture_.isAllocated()) {
-		float w = ndiRecvTexture_.getWidth();
-		float h = ndiRecvTexture_.getHeight();
+	if (ndiReceiver_.ReceiverCreated() && ndiReceiver_.ReceiverConnected() && ndiRecvFbo_.isAllocated()) {
+		float w = ndiRecvFbo_.getWidth();
+		float h = ndiRecvFbo_.getHeight();
 		float winW = ofGetWidth();
 		float winH = ofGetHeight();
 		if (w > 0 && h > 0) {
@@ -715,9 +722,9 @@ void Engine::renderNDIRecv() {
 			float drawH = h * scale;
 			float x = (winW - drawW) / 2.0f;
 			float y = (winH - drawH) / 2.0f;
-			ndiRecvTexture_.draw(x, y, drawW, drawH);
+			ndiRecvFbo_.draw(x, y, drawW, drawH);
 		} else {
-			ndiRecvTexture_.draw(0, 0, winW, winH);
+			ndiRecvFbo_.draw(0, 0, winW, winH);
 		}
 		return;
 	}
