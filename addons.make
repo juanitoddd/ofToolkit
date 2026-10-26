@@ -2,3 +2,4 @@ ofxImGui
 ofxMQTT
 ofxNetwork
 ofxOpenCv
+ofxNDI

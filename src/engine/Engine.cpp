@@ -27,8 +27,7 @@ void Engine::setup() {
 	scanMeshes();
 	fft_.assign(128, 0.0f);
 
-	// NDI setup
-	ndiReceiver_.OpenReceiver();
+	// NDI setup — receiver is opened lazily by ReceiveImage
 	scanNDISources();
 
 	// 3D lighting setup
@@ -81,20 +80,20 @@ void Engine::update() {
 
 	// Update sound FFT when in STATE_SOUND
 	if (current == State::STATE_SOUND && soundPlayer_.isPlaying()) {
-		float* spectrum = ofSoundGetSpectrum(128);
+		float * spectrum = ofSoundGetSpectrum(128);
 		for (size_t i = 0; i < 128; ++i) {
 			fft_[i] = spectrum[i];
 		}
 	} else {
 		// Decay FFT bars when not playing
-		for (auto& v : fft_) {
+		for (auto & v : fft_) {
 			v *= 0.95f;
 		}
 	}
 
 	// NDI state transitions
 	if (previousState_ == State::STATE_NDI_RECV && current != State::STATE_NDI_RECV) {
-		closeNDIReceiver();
+		disconnectNDISource();
 	}
 	if (previousState_ == State::STATE_NDI_SEND && current != State::STATE_NDI_SEND) {
 		stopNDISender();
@@ -106,9 +105,9 @@ void Engine::update() {
 			lastNdiRefreshTime_ = now;
 			scanNDISources();
 		}
-		if (ndiRecvOpened_ && ndiReceiver_.ReceiverConnected()) {
-			ndiReceiver_.ReceiveImage(ndiRecvTexture_);
-		}
+		// ReceiveImage lazily creates/opens the receiver internally
+		ndiReceiver_.ReceiveImage(ndiRecvTexture_);
+		appState_->ndiRecvConnected = ndiReceiver_.ReceiverConnected();
 	}
 	if (current == State::STATE_NDI_SEND && appState_->ndiSendActive && ndiSenderCreated_) {
 		appState_->ndiSendConnections = ndiSender_.GetConnections(0);
@@ -171,7 +170,7 @@ void Engine::scanCameraDevices() {
 	auto devices = grabber_.listDevices();
 	appState_->cameraDeviceNames.clear();
 	appState_->cameraDeviceIDs.clear();
-	for (const auto& dev : devices) {
+	for (const auto & dev : devices) {
 		appState_->cameraDeviceNames.push_back(dev.deviceName);
 		appState_->cameraDeviceIDs.push_back(dev.id);
 	}
@@ -212,54 +211,40 @@ void Engine::scanMeshes() {
 	}
 	// Always add built-in primitives at the end
 	meshPrimitiveNames_ = { "Box", "Sphere", "Cone", "Cylinder", "Plane" };
-	for (const auto& name : meshPrimitiveNames_) {
+	for (const auto & name : meshPrimitiveNames_) {
 		appState_->meshPaths.push_back("primitive:" + name);
 	}
 	appState_->meshIndex = 0;
 }
 
 void Engine::scanNDISources() {
-	if (!ndiReceiver_.OpenReceiver()) {
-		ofLogWarning("Engine") << "NDI receiver not available";
-		return;
-	}
-	ndiReceiver_.RefreshSenders(1000);
+	ndiReceiver_.FindSenders();
 	appState_->ndiSourceNames = ndiReceiver_.GetSenderList();
 	if (appState_->ndiSourceIndex >= static_cast<int>(appState_->ndiSourceNames.size())) {
 		appState_->ndiSourceIndex = 0;
 	}
 }
 
-void Engine::openNDIReceiver() {
-	if (ndiRecvOpened_) return;
-	if (!ndiReceiver_.OpenReceiver()) {
-		ofLogWarning("Engine") << "Failed to open NDI receiver";
-		return;
-	}
-	int idx = appState_->ndiSourceIndex;
+void Engine::selectNDISource(int index) {
 	if (appState_->ndiSourceNames.empty()) {
 		ofLogWarning("Engine") << "No NDI sources to connect to";
 		return;
 	}
-	if (idx < 0 || idx >= static_cast<int>(appState_->ndiSourceNames.size())) {
-		idx = 0;
-		appState_->ndiSourceIndex = 0;
+	if (index < 0 || index >= static_cast<int>(appState_->ndiSourceNames.size())) {
+		index = 0;
 	}
-	if (ndiReceiver_.CreateReceiver(idx)) {
-		ndiRecvOpened_ = true;
-		appState_->ndiRecvConnected = ndiReceiver_.ReceiverConnected();
-		ofLogNotice("Engine") << "NDI receiver connected to: " << appState_->ndiSourceNames[idx];
+	if (ndiReceiver_.SetSenderIndex(index)) {
+		appState_->ndiSourceIndex = index;
+		appState_->ndiRecvConnected = true;
+		ofLogNotice("Engine") << "NDI receiver selected: " << appState_->ndiSourceNames[index];
 	} else {
-		ofLogWarning("Engine") << "Failed to create NDI receiver for source " << idx;
+		ofLogWarning("Engine") << "Failed to select NDI source " << index;
 	}
 }
 
-void Engine::closeNDIReceiver() {
-	if (ndiRecvOpened_) {
-		ndiReceiver_.ReleaseReceiver();
-		ndiRecvOpened_ = false;
-		appState_->ndiRecvConnected = false;
-	}
+void Engine::disconnectNDISource() {
+	ndiReceiver_.ReleaseReceiver();
+	appState_->ndiRecvConnected = false;
 }
 
 void Engine::startNDISender() {
@@ -304,10 +289,10 @@ void Engine::initCamera() {
 	grabber_.setDeviceID(appState_->cameraDeviceIDs[idx]);
 
 	static const std::pair<int, int> resolutions[] = {
-		{320, 240},
-		{640, 480},
-		{1280, 720},
-		{1920, 1080},
+		{ 320, 240 },
+		{ 640, 480 },
+		{ 1280, 720 },
+		{ 1920, 1080 },
 	};
 	int resIdx = ofClamp(appState_->cameraResolutionIndex, 0, 3);
 	int w = resolutions[resIdx].first;
@@ -342,7 +327,7 @@ void Engine::playSound() {
 	if (appState_->soundPaths.empty() || idx < 0 || idx >= static_cast<int>(appState_->soundPaths.size())) {
 		return;
 	}
-	const std::string& path = appState_->soundPaths[idx];
+	const std::string & path = appState_->soundPaths[idx];
 	if (lastSoundPath_ != path || !soundPlayer_.isLoaded()) {
 		soundPlayer_.load(path);
 		lastSoundPath_ = path;
@@ -364,7 +349,7 @@ void Engine::setSoundVolume(float volume) {
 	}
 }
 
-const std::vector<float>& Engine::getSoundFFT() {
+const std::vector<float> & Engine::getSoundFFT() {
 	return fft_;
 }
 
@@ -433,7 +418,7 @@ void Engine::loadCurrentVideo() {
 	if (appState_->videoPaths.empty() || idx < 0 || idx >= static_cast<int>(appState_->videoPaths.size())) {
 		return;
 	}
-	const std::string& path = appState_->videoPaths[idx];
+	const std::string & path = appState_->videoPaths[idx];
 	if (lastVideoPath_ != path) {
 		videoPlayer_.load(path);
 		videoPlayer_.setLoopState(OF_LOOP_NORMAL);
@@ -454,7 +439,7 @@ void Engine::renderText() {
 	ofSetBackgroundColor(ofColor(46, 52, 64));
 	ofSetColor(appState_->textColor);
 
-	const std::string& text = appState_->textContent;
+	const std::string & text = appState_->textContent;
 	float x = ofGetWidth() / 2.0f;
 	float y = ofGetHeight() / 2.0f;
 
@@ -483,7 +468,7 @@ void Engine::renderImage() {
 
 	int idx = appState_->imageIndex;
 	if (!appState_->imagePaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->imagePaths.size())) {
-		const std::string& path = appState_->imagePaths[idx];
+		const std::string & path = appState_->imagePaths[idx];
 		// Lazy load
 		if (!projectorImage_.isAllocated() || lastImagePath_ != path) {
 			projectorImage_.load(path);
@@ -617,7 +602,7 @@ void Engine::renderSound() {
 	ofDrawBitmapString(label, x, y);
 }
 
-void Engine::drawPrimitiveMesh(const std::string& name) {
+void Engine::drawPrimitiveMesh(const std::string & name) {
 	if (name == "Box") {
 		ofDrawBox(0, 0, 0, 200);
 	} else if (name == "Sphere") {
@@ -657,7 +642,7 @@ void Engine::renderMesh() {
 
 	int idx = appState_->meshIndex;
 	if (!appState_->meshPaths.empty() && idx >= 0 && idx < static_cast<int>(appState_->meshPaths.size())) {
-		const std::string& path = appState_->meshPaths[idx];
+		const std::string & path = appState_->meshPaths[idx];
 		ofSetColor(ofColor(200, 200, 210));
 		ofFill();
 
@@ -719,7 +704,7 @@ void Engine::renderNDIRecv() {
 	ofSetBackgroundColor(ofColor(0, 0, 0));
 	ofSetColor(ofColor(255, 255, 255));
 
-	if (ndiRecvOpened_ && ndiRecvTexture_.isAllocated()) {
+	if (ndiReceiver_.ReceiverCreated() && ndiReceiver_.ReceiverConnected() && ndiRecvTexture_.isAllocated()) {
 		float w = ndiRecvTexture_.getWidth();
 		float h = ndiRecvTexture_.getHeight();
 		float winW = ofGetWidth();

@@ -119,7 +119,7 @@ void GuiApp::drawImagePanel() {
 		// Thumbnail + info
 		if (thumbnailImage_.isAllocated()) {
 			ImGui::Separator();
-			ImGui::Text("Dimensions: %dx%d", thumbnailImage_.getWidth(), thumbnailImage_.getHeight());
+			ImGui::Text("Dimensions: %fx%f", thumbnailImage_.getWidth(), thumbnailImage_.getHeight());
 
 			float maxW = 350.0f;
 			float w = thumbnailImage_.getWidth();
@@ -257,7 +257,7 @@ void GuiApp::drawCameraPanel() {
 		}
 
 		// Resolution dropdown
-		static const char* resolutionLabels[] = { "320x240", "640x480", "1280x720", "1920x1080" };
+		static const char * resolutionLabels[] = { "320x240", "640x480", "1280x720", "1920x1080" };
 		ImGui::Text("Resolution:");
 		if (ImGui::BeginCombo("##resolution", resolutionLabels[appState->cameraResolutionIndex])) {
 			for (int i = 0; i < 4; ++i) {
@@ -273,8 +273,7 @@ void GuiApp::drawCameraPanel() {
 		}
 
 		// Re-init camera when device or resolution changes
-		if (appState->cameraDeviceIndex != lastCameraDeviceIndex_ ||
-		    appState->cameraResolutionIndex != lastCameraResolutionIndex_) {
+		if (appState->cameraDeviceIndex != lastCameraDeviceIndex_ || appState->cameraResolutionIndex != lastCameraResolutionIndex_) {
 			lastCameraDeviceIndex_ = appState->cameraDeviceIndex;
 			lastCameraResolutionIndex_ = appState->cameraResolutionIndex;
 			engine_->closeCamera();
@@ -353,24 +352,22 @@ void GuiApp::drawSoundPanel() {
 		// FFT visualizer
 		ImGui::Separator();
 		ImGui::Text("Visualizer:");
-		const std::vector<float>& fft = engine_->getSoundFFT();
+		const std::vector<float> & fft = engine_->getSoundFFT();
 		if (!fft.empty()) {
 			float availW = ImGui::GetContentRegionAvail().x - 10.0f;
 			float barW = availW / static_cast<float>(fft.size());
 			float height = 120.0f;
-			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			ImDrawList * drawList = ImGui::GetWindowDrawList();
 			ImVec2 canvasPos = ImGui::GetCursorScreenPos();
 			for (size_t i = 0; i < fft.size(); ++i) {
 				float h = fft[i] * height * 3.0f;
 				h = std::min(h, height);
 				ImVec2 pMin(
 					canvasPos.x + i * barW + 1.0f,
-					canvasPos.y + height - h
-				);
+					canvasPos.y + height - h);
 				ImVec2 pMax(
 					canvasPos.x + (i + 1) * barW - 1.0f,
-					canvasPos.y + height
-				);
+					canvasPos.y + height);
 				ImU32 col = ImColor(129, 199, 132);
 				drawList->AddRectFilled(pMin, pMax, col);
 			}
@@ -534,11 +531,11 @@ void GuiApp::drawNDIRecvPanel() {
 		}
 
 		if (ImGui::Button("Connect")) {
-			engine_->openNDIReceiver();
+			engine_->selectNDISource(appState->ndiSourceIndex);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Disconnect")) {
-			engine_->closeNDIReceiver();
+			engine_->disconnectNDISource();
 		}
 	}
 

@@ -1,8 +1,7 @@
 #pragma once
 #include "../state/AppState.h"
 #include "ofMain.h"
-#include "ofxNDIreceiver.h"
-#include "ofxNDIsender.h"
+#include "ofxNDI.h" // NDI classes
 #include <memory>
 #include <string>
 
@@ -40,7 +39,7 @@ public:
 	void playSound();
 	void stopSound();
 	void setSoundVolume(float volume);
-	const std::vector<float>& getSoundFFT();
+	const std::vector<float> & getSoundFFT();
 
 	// Mesh controls
 	void scanMeshes();
@@ -48,8 +47,8 @@ public:
 
 	// NDI controls
 	void scanNDISources();
-	void openNDIReceiver();
-	void closeNDIReceiver();
+	void selectNDISource(int index);
+	void disconnectNDISource();
 	void startNDISender();
 	void stopNDISender();
 
@@ -74,11 +73,11 @@ private:
 	std::string lastMeshPath_;
 	bool meshLoaded_ = false;
 	std::vector<std::string> meshPrimitiveNames_;
+
 	ofxNDIreceiver ndiReceiver_;
 	ofxNDIsender ndiSender_;
 	ofTexture ndiRecvTexture_;
 	ofFbo ndiSendFbo_;
-	bool ndiRecvOpened_ = false;
 	bool ndiSenderCreated_ = false;
 	uint64_t lastNdiRefreshTime_ = 0;
 
@@ -92,5 +91,5 @@ private:
 	void renderSound();
 	void renderNDIRecv();
 	void renderNDISend();
-	void drawPrimitiveMesh(const std::string& name);
+	void drawPrimitiveMesh(const std::string & name);
 };
