@@ -563,8 +563,27 @@ void GuiApp::drawNDIRecvPanel() {
 }
 
 void GuiApp::drawNDISendPanel() {
-	ImGui::SetNextWindowSize(ofVec2f(400, 300), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ofVec2f(400, 500), ImGuiCond_FirstUseEver);
 	ImGui::Begin("NDI Sender");
+
+	// Camera preview
+	GLuint camTexID = engine_->getCameraTextureID();
+	if (camTexID != 0) {
+		ImGui::Text("Camera Preview:");
+		float maxW = 350.0f;
+		float maxH = 220.0f;
+		float drawW = maxW;
+		float drawH = maxW * 3.0f / 4.0f;
+		if (drawH > maxH) {
+			float scale = maxH / drawH;
+			drawW *= scale;
+			drawH *= scale;
+		}
+		ImTextureID id = (ImTextureID)(intptr_t)camTexID;
+		ImTextureRef ref(id);
+		ImGui::Image(ref, ImVec2(drawW, drawH));
+		ImGui::Separator();
+	}
 
 	// Sender name
 	char nameBuf[256];

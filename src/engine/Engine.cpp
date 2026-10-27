@@ -51,8 +51,10 @@ void Engine::update() {
 		}
 	}
 
-	// Stop camera when switching away from STATE_CAMERA
-	if (previousState_ == State::STATE_CAMERA && current != State::STATE_CAMERA) {
+	// Stop camera when switching away from camera-using states
+	bool wasUsingCamera = (previousState_ == State::STATE_CAMERA || previousState_ == State::STATE_NDI_SEND);
+	bool isUsingCamera = (current == State::STATE_CAMERA || current == State::STATE_NDI_SEND);
+	if (wasUsingCamera && !isUsingCamera) {
 		closeCamera();
 	}
 
@@ -63,8 +65,8 @@ void Engine::update() {
 		}
 	}
 
-	// Init/start camera when entering STATE_CAMERA
-	if (current == State::STATE_CAMERA) {
+	// Init/start camera when entering camera-using states
+	if (isUsingCamera) {
 		if (!cameraInitialized_) {
 			initCamera();
 		}
@@ -108,9 +110,6 @@ void Engine::update() {
 		// ReceiveImage lazily creates/opens the receiver internally
 		ndiReceiver_.ReceiveImage(ndiRecvFbo_);
 		appState_->ndiRecvConnected = ndiReceiver_.ReceiverConnected();
-	}
-	if (current == State::STATE_NDI_SEND && appState_->ndiSendActive && ndiSenderCreated_) {
-		appState_->ndiSendConnections = ndiSender_.GetConnections(0);
 	}
 
 	previousState_ = current;
@@ -738,46 +737,39 @@ void Engine::renderNDIRecv() {
 }
 
 void Engine::renderNDISend() {
-	ofSetBackgroundColor(ofColor(46, 52, 64));
+	ofSetBackgroundColor(ofColor(0, 0, 0));
+	ofSetColor(ofColor(255, 255, 255));
 
-	float winW = ofGetWidth();
-	float winH = ofGetHeight();
+	if (cameraInitialized_) {
+		float w = grabber_.getWidth();
+		float h = grabber_.getHeight();
+		float winW = ofGetWidth();
+		float winH = ofGetHeight();
+		if (w > 0 && h > 0) {
+			float scale = std::min(winW / w, winH / h);
+			float drawW = w * scale;
+			float drawH = h * scale;
+			float x = (winW - drawW) / 2.0f;
+			float y = (winH - drawH) / 2.0f;
+			grabber_.draw(x, y, drawW, drawH);
+		} else {
+			grabber_.draw(0, 0, winW, winH);
+		}
 
-	// Render to FBO for NDI broadcast (on-demand, only in this state)
-	if (ndiSenderCreated_ && ndiSendFbo_.isAllocated()) {
-		ndiSendFbo_.begin();
-		ofClear(46, 52, 64, 255);
-		ofSetColor(ofColor(216, 222, 233));
-		// Status screen content
-		std::string title = "NDI Sender";
-		std::string name = "Name: " + appState_->ndiSendName;
-		std::string conn = "Connections: " + std::to_string(appState_->ndiSendConnections);
-		std::string status = appState_->ndiSendActive ? "Broadcasting" : "Idle";
-		float cx = winW / 2.0f;
-		float cy = winH / 2.0f;
-		ofDrawBitmapString(title, cx - title.length() * 4.0f, cy - 40);
-		ofDrawBitmapString(name, cx - name.length() * 4.0f, cy - 10);
-		ofDrawBitmapString(conn, cx - conn.length() * 4.0f, cy + 20);
-		ofSetColor(appState_->ndiSendActive ? ofColor(129, 199, 132) : ofColor(236, 239, 244));
-		ofDrawBitmapString(status, cx - status.length() * 4.0f, cy + 50);
-		ndiSendFbo_.end();
-
-		// Draw FBO to screen
-		ofSetColor(ofColor(255, 255, 255));
-		ndiSendFbo_.draw(0, 0, winW, winH);
-
-		// Send via NDI
-		ndiSender_.SendImage(ndiSendFbo_);
-	} else {
-		ofSetColor(ofColor(216, 222, 233));
-		std::string label = "NDI Sender";
-		std::string sub = appState_->ndiSendActive ? "Broadcasting..." : "Not active";
-		float cx = winW / 2.0f;
-		float cy = winH / 2.0f;
-		ofDrawBitmapString(label, cx - label.length() * 4.0f, cy - 10);
-		ofSetColor(appState_->ndiSendActive ? ofColor(129, 199, 132) : ofColor(128, 128, 128));
-		ofDrawBitmapString(sub, cx - sub.length() * 4.0f, cy + 20);
+		// Send camera texture via NDI if sender is active
+		if (ndiSenderCreated_) {
+			ndiSender_.SendImage(grabber_.getTexture());
+			appState_->ndiSendConnections = ndiSender_.GetConnections(0);
+		}
+		return;
 	}
+
+	// No camera fallback
+	ofSetColor(ofColor(128, 128, 128));
+	std::string label = appState_->cameraDeviceNames.empty() ? "No camera found" : "Camera not initialized";
+	float x = ofGetWidth() / 2.0f - label.length() * 4.0f;
+	float y = ofGetHeight() / 2.0f;
+	ofDrawBitmapString(label, x, y);
 }
 
 void Engine::renderProjector(State state) {
