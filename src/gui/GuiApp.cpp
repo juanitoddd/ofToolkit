@@ -570,8 +570,8 @@ void GuiApp::drawNDISendPanel() {
 	GLuint camTexID = engine_->getCameraTextureID();
 	if (camTexID != 0) {
 		ImGui::Text("Camera Preview:");
-		float maxW = 350.0f;
-		float maxH = 220.0f;
+		float maxW = 640.0f;
+		float maxH = 360.0f;
 		float drawW = maxW;
 		float drawH = maxW * 3.0f / 4.0f;
 		if (drawH > maxH) {

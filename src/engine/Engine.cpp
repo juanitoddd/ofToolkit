@@ -255,8 +255,8 @@ GLuint Engine::getNDIRecvTextureID() const {
 
 void Engine::startNDISender() {
 	if (ndiSenderCreated_) return;
-	int w = 1920;
-	int h = 1080;
+	int w = 1280;
+	int h = 720;
 	if (!ndiSendFbo_.isAllocated()) {
 		ndiSendFbo_.allocate(w, h, GL_RGBA);
 	}
@@ -301,8 +301,10 @@ void Engine::initCamera() {
 		{ 1920, 1080 },
 	};
 	int resIdx = ofClamp(appState_->cameraResolutionIndex, 0, 3);
-	int w = resolutions[resIdx].first;
-	int h = resolutions[resIdx].second;
+	// int w = resolutions[resIdx].first;
+	// int h = resolutions[resIdx].second;
+	int w = 1280;
+	int h = 720;
 
 	grabber_.setup(w, h);
 	cameraInitialized_ = grabber_.isInitialized();
